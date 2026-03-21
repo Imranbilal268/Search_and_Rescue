@@ -1,0 +1,32 @@
+{
+    "grid": [
+        [
+          ["wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "door",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall"],
+          ["wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stair", "stair", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stair", "stair", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"],
+          ["wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"]
+        ],
+        [
+          ["wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall"],
+          ["wall",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stair", "stair", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stair", "stair", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"],
+          ["wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall"]
+        ]
+      ]
+}

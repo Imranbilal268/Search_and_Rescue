@@ -1,15 +1,42 @@
 import { useState, useRef } from "react";
+import { CELL_STYLES, CELL_DESCRIPTIONS } from "./CellStyles";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FileUpload
+//
+// Accepts two JSON shapes:
+//
+//  LEGACY (flat array):
+//    { "anyKey": [ [[...floor0...]], [[...floor1...]] ] }
+//
+//  RICH (building object):
+//    {
+//      "building": {
+//        "name": "...",
+//        "grid": [ [[...floor0...]], [[...floor1...]] ],
+//        "room_labels":     { "x,y,z": "Room name", ... },
+//        "cell_properties": { "x,y,z": { label, ... }, ... }
+//      }
+//    }
+//
+// onLoad is called with a normalised object:
+//   {
+//     floors:         string[][][]   — the 3D grid  [z][y][x]
+//     buildingName:   string | null
+//     roomLabels:     { "x,y,z": string }   (empty object if not present)
+//     cellProperties: { "x,y,z": object }   (empty object if not present)
+//   }
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function FileUpload({ onLoad }) {
-  const [error, setError] = useState(null);
+  const [error,      setError]      = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [fileName, setFileName] = useState(null);
+  const [fileName,   setFileName]   = useState(null);
   const inputRef = useRef(null);
 
-  // ─── Core parse logic ────────────────────────────────────────────────────────
+  // ─── Parse & normalise ─────────────────────────────────────────────────────
 
   function parseFile(file) {
-    // Guard: must be a .json file
     if (!file || !file.name.endsWith(".json")) {
       setError("Please upload a valid .json file.");
       return;
@@ -20,305 +47,191 @@ export default function FileUpload({ onLoad }) {
     reader.onload = (e) => {
       try {
         const parsed = JSON.parse(e.target.result);
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
+          throw new Error("Top-level JSON must be an object.");
 
-        // Auto-detect the first key in the object (e.g. "example")
-        const firstKey = Object.keys(parsed)[0];
-        if (!firstKey) throw new Error("JSON object is empty.");
+        let floors, buildingName, roomLabels, cellProperties;
 
-        const floors = parsed[firstKey];
-
-        // Validate: must be a non-empty array (the z axis)
-        if (!Array.isArray(floors) || floors.length === 0) {
-          throw new Error(`"${firstKey}" must be a non-empty array of floors.`);
+        // ── Detect schema format ──────────────────────────────────────────
+        if (parsed.building && typeof parsed.building === "object" && Array.isArray(parsed.building.grid)) {
+          // RICH format
+          const b       = parsed.building;
+          floors         = b.grid;
+          buildingName   = b.name   ?? null;
+          roomLabels     = b.room_labels     ?? {};
+          cellProperties = b.cell_properties ?? {};
+        } else {
+          // LEGACY format — grab the first key whose value is a 3-D array
+          const firstKey = Object.keys(parsed)[0];
+          if (!firstKey) throw new Error("JSON object is empty.");
+          const val = parsed[firstKey];
+          if (!Array.isArray(val) || !Array.isArray(val[0]) || !Array.isArray(val[0][0]))
+            throw new Error(
+              `Could not detect a valid schema. ` +
+              `Expected either a "building.grid" array or a top-level 3-D array.`
+            );
+          floors         = val;
+          buildingName   = null;
+          roomLabels     = {};
+          cellProperties = {};
         }
 
-        // Validate: each floor must be a 2D array
+        // ── Validate grid ─────────────────────────────────────────────────
+        if (!Array.isArray(floors) || floors.length === 0)
+          throw new Error("Grid must be a non-empty array of floors.");
+
         floors.forEach((floor, z) => {
-          if (!Array.isArray(floor) || floor.length === 0) {
-            throw new Error(`Floor ${z} is not a valid 2D array.`);
-          }
+          if (!Array.isArray(floor) || floor.length === 0)
+            throw new Error(`Floor ${z} is not a valid 2-D array.`);
           floor.forEach((row, y) => {
-            if (!Array.isArray(row) || row.length === 0) {
+            if (!Array.isArray(row) || row.length === 0)
               throw new Error(`Floor ${z}, row ${y} is not a valid array.`);
-            }
           });
         });
 
-        // All good — clear error, store file name, pass floors up
         setError(null);
         setFileName(file.name);
-        onLoad(floors);
+        onLoad({ floors, buildingName, roomLabels, cellProperties });
+
       } catch (err) {
         setError(`Invalid JSON: ${err.message}`);
       }
     };
 
-    reader.onerror = () => {
-      setError("Failed to read the file. Please try again.");
-    };
-
+    reader.onerror = () => setError("Failed to read the file. Please try again.");
     reader.readAsText(file);
   }
 
-  // ─── Event handlers ───────────────────────────────────────────────────────────
+  // ─── Event handlers ────────────────────────────────────────────────────────
 
-  function handleFileChange(e) {
-    const file = e.target.files[0];
-    if (file) parseFile(file);
-  }
+  const handleFileChange = (e) => parseFile(e.target.files[0]);
+  const handleDrop       = (e) => { e.preventDefault(); setIsDragging(false); parseFile(e.dataTransfer.files[0]); };
+  const handleDragOver   = (e) => { e.preventDefault(); setIsDragging(true);  };
+  const handleDragLeave  = ()  => setIsDragging(false);
 
-  function handleDrop(e) {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) parseFile(file);
-  }
-
-  function handleDragOver(e) {
-    e.preventDefault();
-    setIsDragging(true);
-  }
-
-  function handleDragLeave() {
-    setIsDragging(false);
-  }
-
-  function handleClick() {
-    // Programmatically open the file picker
-    inputRef.current.click();
-  }
-
-  // ─── Render ───────────────────────────────────────────────────────────────────
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div style={styles.wrapper}>
       <h1 style={styles.title}>Floor Plan Viewer</h1>
       <p style={styles.subtitle}>Upload a JSON file to visualise your building layout</p>
 
-      {/* Drop zone — also acts as a click target */}
+      {/* Drop zone */}
       <div
-        style={{
-          ...styles.dropZone,
-          ...(isDragging ? styles.dropZoneDragging : {}),
-        }}
-        onClick={handleClick}
+        style={{ ...styles.dropZone, ...(isDragging ? styles.dropZoneDragging : {}) }}
+        onClick={() => inputRef.current.click()}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
       >
-        {/* Hidden real file input — triggered by the click handler above */}
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".json"
-          onChange={handleFileChange}
-          style={styles.hiddenInput}
-        />
-
+        <input ref={inputRef} type="file" accept=".json"
+          onChange={handleFileChange} style={{ display: "none" }} />
         <span style={styles.icon}>📂</span>
         <p style={styles.dropText}>
-          {fileName
-            ? `Loaded: ${fileName}`
-            : "Drag & drop your JSON file here, or click to browse"}
+          {fileName ? `Loaded: ${fileName}` : "Drag & drop your JSON file here, or click to browse"}
         </p>
         <p style={styles.dropHint}>.json files only</p>
       </div>
 
-      {/* Error message */}
-      {error && (
-        <div style={styles.errorBox}>
-          <strong>Error:</strong> {error}
-        </div>
-      )}
+      {error && <div style={styles.errorBox}><strong>Error:</strong> {error}</div>}
 
-      {/* Schema + visual legend */}
+      {/* Schema reference */}
       <div style={styles.schemaBox}>
-
-        {/* ── Code block ── */}
-        <p style={styles.schemaTitle}>Expected JSON shape</p>
+        <p style={styles.schemaTitle}>Supported JSON formats</p>
         <pre style={styles.pre}>{SCHEMA_EXAMPLE}</pre>
 
-        {/* ── Visual cell-type legend ── */}
         <p style={{ ...styles.schemaTitle, marginTop: "1rem" }}>Cell types</p>
         <div style={styles.legendGrid}>
           {Object.entries(CELL_STYLES).map(([type, s]) => (
             <div key={type} style={styles.legendRow}>
-              {/* Colour swatch — matches FloorPlan.jsx exactly */}
               <svg width={20} height={20} style={{ flexShrink: 0 }}>
-                <rect
-                  x={1} y={1} width={18} height={18}
-                  fill={s.fill}
-                  stroke={s.stroke}
-                  strokeWidth={1.5}
-                  rx={2}
-                />
+                <rect x={1} y={1} width={18} height={18}
+                  fill={s.fill} stroke={s.stroke} strokeWidth={1.5} rx={2} />
               </svg>
               <span style={styles.legendType}>{type}</span>
               <span style={styles.legendDesc}>{CELL_DESCRIPTIONS[type]}</span>
             </div>
           ))}
         </div>
-
       </div>
     </div>
   );
 }
 
-// ─── Shared cell-type config (must mirror FloorPlan.jsx CELL_STYLES) ──────────
-//     Keep these two objects in sync whenever you add or change a cell type.
-
-export const CELL_STYLES = {
-  wall:       { fill: "#2c2c2c", stroke: "#111"    },
-  floor:      { fill: "#f0ede8", stroke: "#ddd"    },
-  door:       { fill: "#a0522d", stroke: "#7a3b1e" },
-  stairwell:  { fill: "#b0c4de", stroke: "#6a8cad" },
-  window:     { fill: "#add8e6", stroke: "#5bafd6" },
-  elevator:   { fill: "#d8b4fe", stroke: "#9333ea" },
-  hazard:     { fill: "#fde68a", stroke: "#d97706" },
-  empty:      { fill: "#ffffff", stroke: "#ccc"    },
-};
-
-const CELL_DESCRIPTIONS = {
-  wall:      "Solid boundary — impassable",
-  floor:     "Open walkable area",
-  door:      "Entry / exit point between rooms",
-  stairwell: "Vertical access between floors",
-  window:    "Glazed wall opening",
-  elevator:  "Lift shaft",
-  hazard:    "Dangerous or restricted zone",
-  empty:     "Void — nothing rendered",
-};
-
-// ─── Schema text shown in the code block ──────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Schema hint
+// ─────────────────────────────────────────────────────────────────────────────
 
 const SCHEMA_EXAMPLE =
-`{
-  "anyKeyName": [          ← top-level key (any name)
-    [                      ← floor 0  (z-axis)
-      ["wall","wall","wall"],
-      ["wall","floor","door"],
-      ["wall","wall","wall"]
+`── RICH FORMAT (recommended) ──────────────────────
+{
+  "building": {
+    "name": "My Building",
+    "grid": [              ← [z][y][x] 3-D array
+      [ ["wall","floor",...], ... ],   ← floor 0
+      [ ["wall","floor",...], ... ]    ← floor 1
     ],
-    [                      ← floor 1  (z-axis)
-      ["wall","window","wall"],
-      ["wall","elevator","wall"],
-      ["wall","stairwell","wall"]
-    ]
+    "room_labels": {       ← optional
+      "x,y,z": "Kitchen",
+      "x,y,z": "Bedroom"
+    },
+    "cell_properties": {   ← optional
+      "x,y,z": { "label": "Front door", "locked": false }
+    }
+  }
+}
+
+── LEGACY FORMAT (also supported) ─────────────────
+{
+  "anyKey": [
+    [ ["wall","floor",...], ... ],  ← floor 0
+    [ ["wall","floor",...], ... ]   ← floor 1
   ]
 }`;
 
-// ─── Inline styles ────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────────────────────────────────────
 
 const styles = {
   wrapper: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: "100vh",
-    padding: "2rem",
-    fontFamily: "sans-serif",
-    backgroundColor: "#f5f5f5",
+    display: "flex", flexDirection: "column", alignItems: "center",
+    justifyContent: "center", minHeight: "100vh", padding: "2rem",
+    fontFamily: "sans-serif", backgroundColor: "#f5f5f5",
   },
-  title: {
-    fontSize: "2rem",
-    marginBottom: "0.25rem",
-  },
-  subtitle: {
-    color: "#666",
-    marginBottom: "2rem",
-  },
+  title:    { fontSize: "2rem", marginBottom: "0.25rem" },
+  subtitle: { color: "#666", marginBottom: "2rem" },
   dropZone: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-    maxWidth: "480px",
-    padding: "2.5rem",
-    border: "2px dashed #aaa",
-    borderRadius: "12px",
-    backgroundColor: "#fff",
-    cursor: "pointer",
+    display: "flex", flexDirection: "column", alignItems: "center",
+    justifyContent: "center", width: "100%", maxWidth: "520px",
+    padding: "2.5rem", border: "2px dashed #aaa", borderRadius: "12px",
+    backgroundColor: "#fff", cursor: "pointer",
     transition: "border-color 0.2s, background-color 0.2s",
   },
-  dropZoneDragging: {
-    borderColor: "#4a90e2",
-    backgroundColor: "#eaf3ff",
-  },
-  hiddenInput: {
-    display: "none",
-  },
-  icon: {
-    fontSize: "2.5rem",
-    marginBottom: "0.75rem",
-  },
-  dropText: {
-    fontSize: "1rem",
-    color: "#333",
-    margin: 0,
-    textAlign: "center",
-  },
-  dropHint: {
-    fontSize: "0.8rem",
-    color: "#999",
-    marginTop: "0.4rem",
-  },
+  dropZoneDragging: { borderColor: "#4a90e2", backgroundColor: "#eaf3ff" },
+  icon:      { fontSize: "2.5rem", marginBottom: "0.75rem" },
+  dropText:  { fontSize: "1rem", color: "#333", margin: 0, textAlign: "center" },
+  dropHint:  { fontSize: "0.8rem", color: "#999", marginTop: "0.4rem" },
   errorBox: {
-    marginTop: "1rem",
-    padding: "0.75rem 1.25rem",
-    backgroundColor: "#fff0f0",
-    border: "1px solid #f5a5a5",
-    borderRadius: "8px",
-    color: "#cc0000",
-    maxWidth: "480px",
-    width: "100%",
+    marginTop: "1rem", padding: "0.75rem 1.25rem",
+    backgroundColor: "#fff0f0", border: "1px solid #f5a5a5",
+    borderRadius: "8px", color: "#cc0000", maxWidth: "520px", width: "100%",
   },
   schemaBox: {
-    marginTop: "2rem",
-    padding: "1.25rem",
-    backgroundColor: "#fff",
-    border: "1px solid #ddd",
-    borderRadius: "8px",
-    maxWidth: "480px",
-    width: "100%",
+    marginTop: "2rem", padding: "1.25rem", backgroundColor: "#fff",
+    border: "1px solid #ddd", borderRadius: "8px", maxWidth: "520px", width: "100%",
   },
-  schemaTitle: {
-    fontWeight: "bold",
-    marginBottom: "0.5rem",
-  },
+  schemaTitle: { fontWeight: "bold", marginBottom: "0.5rem", margin: 0 },
   pre: {
-    backgroundColor: "#f0f0f0",
-    padding: "0.75rem",
-    borderRadius: "6px",
-    fontSize: "0.75rem",
-    overflowX: "auto",
-    whiteSpace: "pre",
+    backgroundColor: "#f0f0f0", padding: "0.75rem", borderRadius: "6px",
+    fontSize: "0.72rem", overflowX: "auto", whiteSpace: "pre",
+    marginTop: "0.5rem",
   },
-  schemaHint: {   // kept for backwards compat but no longer used in JSX
-    fontSize: "0.8rem",
-    color: "#555",
-    marginTop: "0.75rem",
-  },
-  legendGrid: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.45rem",
-  },
-  legendRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.55rem",
-  },
+  legendGrid: { display: "flex", flexDirection: "column", gap: "0.45rem" },
+  legendRow:  { display: "flex", alignItems: "center", gap: "0.55rem" },
   legendType: {
-    fontFamily: "monospace",
-    fontSize: "0.8rem",
-    fontWeight: "600",
-    color: "#222",
-    minWidth: "80px",
+    fontFamily: "monospace", fontSize: "0.8rem", fontWeight: "600",
+    color: "#222", minWidth: "80px",
   },
-  legendDesc: {
-    fontSize: "0.75rem",
-    color: "#666",
-  },
+  legendDesc: { fontSize: "0.75rem", color: "#666" },
 };
