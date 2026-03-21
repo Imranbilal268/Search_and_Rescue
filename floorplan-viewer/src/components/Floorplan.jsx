@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback, useRef } from "react";
 import { CELL_STYLES } from "./CellStyles";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -215,7 +215,29 @@ function Legend() {
 // FLOORPLAN — default export
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellProperties = {} }) {
+export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellProperties = {}, exactWidth = null, exactHeight = null }) {
+  const [zoom, setZoom] = useState(1);
+  const wrapperRef = useRef(null);
+
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    setZoom(prev => {
+      const delta = e.deltaY < 0 ? 0.1 : -0.1;
+      return Math.min(4, Math.max(0.25, prev + delta));
+    });
+  }, []);
+
+  // Attach wheel listener with { passive: false } so preventDefault works
+  const setWrapperRef = useCallback((el) => {
+    if (wrapperRef.current) {
+      wrapperRef.current.removeEventListener("wheel", handleWheel);
+    }
+    wrapperRef.current = el;
+    if (el) {
+      el.addEventListener("wheel", handleWheel, { passive: false });
+    }
+  }, [handleWheel]);
+
   const { svgWidth, svgHeight } = useMemo(() => ({
     svgWidth:  (grid[0]?.length ?? 0) * CELL_SIZE + PADDING * 2,
     svgHeight: grid.length            * CELL_SIZE + PADDING * 2,
@@ -241,39 +263,68 @@ export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellP
     return out;
   }, [cellProperties, floorIndex]);
 
+  // ── Shared cell render helper ─────────────────────────────────────────────
+  function renderCells() {
+    return (
+      <>
+        {grid.map((row, y) =>
+          row.map((type, x) => (
+            <Cell key={`tile-${y}-${x}`} type={type} col={x} row={y} size={CELL_SIZE} />
+          ))
+        )}
+        {Object.entries(floorRoomLabels).map(([key, label]) => {
+          const [x, y] = key.split(",").map(Number);
+          return <RoomLabel key={`room-${key}`} col={x} row={y} size={CELL_SIZE} text={label} />;
+        })}
+        {Object.entries(floorCellProps).map(([key, props]) => {
+          if (!props.label) return null;
+          const [x, y] = key.split(",").map(Number);
+          return <CellLabel key={`cell-${key}`} col={x} row={y} size={CELL_SIZE} text={props.label} />;
+        })}
+      </>
+    );
+  }
+
   return (
     <div style={styles.container}>
-      <div style={styles.canvasWrapper}>
-        <svg width={svgWidth} height={svgHeight} style={{ display: "block" }}>
+      {/* Zoom controls — hidden when exactWidth is set (FloorCanvas mode) */}
+      {!exactWidth && (
+        <div style={styles.zoomBar}>
+          <button style={styles.zoomBtn} onClick={() => setZoom(z => Math.min(4, +(z + 0.25).toFixed(2)))}>＋</button>
+          <span style={styles.zoomLabel}>{Math.round(zoom * 100)}%</span>
+          <button style={styles.zoomBtn} onClick={() => setZoom(z => Math.max(0.25, +(z - 0.25).toFixed(2)))}>－</button>
+          <button style={styles.zoomBtn} onClick={() => setZoom(1)}>Reset</button>
+          <span style={styles.zoomHint}>or scroll over the map</span>
+        </div>
+      )}
 
-          {/* ── Tile layer ── */}
-          {grid.map((row, y) =>
-            row.map((type, x) => (
-              <Cell key={`tile-${y}-${x}`} type={type} col={x} row={y} size={CELL_SIZE} />
-            ))
-          )}
+      {/* Scrollable canvas */}
+      {!exactWidth && (
+        <div ref={setWrapperRef} style={styles.canvasWrapper}>
+          <div style={{ width: svgWidth * zoom, height: svgHeight * zoom, flexShrink: 0 }}>
+            <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+              style={{ display: "block", width: "100%", height: "100%" }}
+              preserveAspectRatio="xMidYMid meet">
+              {renderCells()}
+            </svg>
+          </div>
+        </div>
+      )}
 
-          {/* ── Room label layer ── */}
-          {Object.entries(floorRoomLabels).map(([key, label]) => {
-            const [x, y] = key.split(",").map(Number);
-            return (
-              <RoomLabel key={`room-${key}`} col={x} row={y} size={CELL_SIZE} text={label} />
-            );
-          })}
-
-          {/* ── Cell property label layer (doors, windows, stairs) ── */}
-          {Object.entries(floorCellProps).map(([key, props]) => {
-            if (!props.label) return null;
-            const [x, y] = key.split(",").map(Number);
-            return (
-              <CellLabel key={`cell-${key}`} col={x} row={y} size={CELL_SIZE} text={props.label} />
-            );
-          })}
-
+      {/* Exact-size mode — used inside FloorCanvas so coordinates are 1:1 */}
+      {exactWidth && (
+        <svg
+          width={exactWidth}
+          height={exactHeight}
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          style={{ display: "block" }}
+          preserveAspectRatio="none"
+        >
+          {renderCells()}
         </svg>
-      </div>
+      )}
 
-      <Legend />
+      {!exactWidth && <Legend />}
     </div>
   );
 }
@@ -284,19 +335,39 @@ export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellP
 
 const styles = {
   container: {
-    display: "flex", flexDirection: "column", alignItems: "center",
-    gap: "1rem", width: "100%",
+    display: "flex", flexDirection: "column", alignItems: "stretch",
+    gap: "0.75rem", width: "100%",
+  },
+  zoomBar: {
+    display: "flex", alignItems: "center", gap: "0.5rem",
+    padding: "0.3rem 0",
+  },
+  zoomBtn: {
+    padding: "0.2rem 0.6rem", fontSize: "0.85rem",
+    border: "1px solid #ccc", borderRadius: "5px",
+    backgroundColor: "#fff", cursor: "pointer", color: "#333",
+  },
+  zoomLabel: {
+    fontSize: "0.8rem", color: "#555", minWidth: "40px", textAlign: "center",
+  },
+  zoomHint: {
+    fontSize: "0.72rem", color: "#bbb", marginLeft: "0.25rem",
   },
   canvasWrapper: {
-    overflow: "auto", maxWidth: "100%",
-    border: "1px solid #ccc", borderRadius: "8px",
-    backgroundColor: "#fafafa", boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+    overflow:        "auto",
+    width:           "100%",
+    flex:            1,
+    minHeight:       "60vh",
+    border:          "1px solid #ccc",
+    borderRadius:    "8px",
+    backgroundColor: "#fafafa",
+    boxShadow:       "0 2px 8px rgba(0,0,0,0.08)",
   },
   legend: {
     display: "flex", flexWrap: "wrap", gap: "0.6rem 1.25rem",
     padding: "0.75rem 1.25rem", backgroundColor: "#fff",
     border: "1px solid #ddd", borderRadius: "8px",
-    maxWidth: "600px", width: "100%",
+    width: "100%",
   },
   legendItem: { display: "flex", alignItems: "center", gap: "0.4rem" },
   legendLabel: { fontSize: "0.8rem", color: "#444" },
