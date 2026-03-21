@@ -1,0 +1,260 @@
+{
+  "$schema": "rescuegrid-v1",
+  "building": {
+    "meta": {
+      "schema_version": "1.0",
+      "name": "Optimality Test Office Building",
+      "floors": 4,
+      "width": 20,
+      "height": 14
+    },
+    "grid": null,
+    "cell_properties": {
+      "18,2,0": {
+        "label": "Storage A",
+        "fire_accelerant": true
+      },
+      "19,6,1": {
+        "requires": "ladder",
+        "label": "Floor 1 East Window"
+      },
+      "9,6,0": {
+        "traversal_cost_multiplier": 3.0,
+        "label": "Debris Field"
+      },
+      "9,7,0": {
+        "traversal_cost_multiplier": 3.0,
+        "label": "Debris Field"
+      },
+      "10,6,0": {
+        "traversal_cost_multiplier": 3.0,
+        "label": "Debris Field"
+      },
+      "10,7,0": {
+        "traversal_cost_multiplier": 3.0,
+        "label": "Debris Field"
+      },
+      "15,5,1": {
+        "locked": true,
+        "requires": "ax",
+        "label": "IT Lab Door"
+      },
+      "15,2,0": {
+        "label": "Storage A",
+        "fire_accelerant": true
+      },
+      "15,3,0": {
+        "label": "Storage A",
+        "fire_accelerant": true
+      },
+      "15,4,0": {
+        "label": "Storage A",
+        "fire_accelerant": true
+      },
+      "16,2,0": {
+        "label": "Storage A",
+        "fire_accelerant": true
+      },
+      "16,3,0": {
+        "label": "Storage A",
+        "fire_accelerant": true
+      },
+      "16,4,0": {
+        "label": "Storage A",
+        "fire_accelerant": true
+      },
+      "17,2,0": {
+        "label": "Storage A",
+        "fire_accelerant": true
+      },
+      "17,3,0": {
+        "label": "Storage A",
+        "fire_accelerant": true
+      },
+      "17,4,0": {
+        "label": "Storage A",
+        "fire_accelerant": true
+      }
+    },
+    "vertical_connections": [
+      {
+        "id": "stairwell_west",
+        "type": "stairwell",
+        "label": "West Stairwell",
+        "x": 2,
+        "y": 5,
+        "floors": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "traversal_cost": 3,
+        "victim_carry_cost_multiplier": 2.0
+      },
+      {
+        "id": "stairwell_east",
+        "type": "stairwell",
+        "label": "East Stairwell",
+        "x": 18,
+        "y": 5,
+        "floors": [
+          0,
+          1,
+          2
+        ],
+        "traversal_cost": 3,
+        "victim_carry_cost_multiplier": 2.0
+      },
+      {
+        "id": "window_f1",
+        "type": "window",
+        "label": "Floor 1 East Window",
+        "x": 19,
+        "y": 6,
+        "floor": 1,
+        "traversal_cost": 7,
+        "requires": "ladder"
+      },
+      {
+        "id": "elevator_central",
+        "type": "elevator",
+        "label": "Central Elevator",
+        "x": 10,
+        "y": 6,
+        "floors": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "traversal_cost": 2,
+        "victim_carry_cost_multiplier": 1.0,
+        "default_passable": false
+      }
+    ],
+    "exit_nodes": [
+      {
+        "id": "exit_west",
+        "x": 0,
+        "y": 6,
+        "z": 0,
+        "label": "West Exit",
+        "always_open": true
+      },
+      {
+        "id": "exit_east",
+        "x": 19,
+        "y": 6,
+        "z": 0,
+        "label": "East Exit",
+        "always_open": false
+      }
+    ],
+    "floor_labels": {
+      "0": "Ground Floor",
+      "1": "First Floor",
+      "2": "Second Floor",
+      "3": "Third Floor"
+    }
+  },
+  "scenario": {
+    "responders": [
+      {
+        "id": "R1",
+        "label": "Alpha - Scout",
+        "x": 1,
+        "y": 6,
+        "z": 0,
+        "equipment": [
+          "drone"
+        ]
+      },
+      {
+        "id": "R2",
+        "label": "Bravo - Breacher",
+        "x": 1,
+        "y": 6,
+        "z": 0,
+        "equipment": [
+          "ax",
+          "medic_kit"
+        ]
+      },
+      {
+        "id": "R3",
+        "label": "Charlie - Climber",
+        "x": 1,
+        "y": 6,
+        "z": 0,
+        "equipment": [
+          "ladder"
+        ]
+      },
+      {
+        "id": "R4",
+        "label": "Delta - Support",
+        "x": 1,
+        "y": 6,
+        "z": 0,
+        "equipment": [
+          "medic_kit",
+          "drone"
+        ]
+      }
+    ],
+    "victims": [
+      {
+        "id": "V1",
+        "label": "Staff - Center Corridor",
+        "x": 8,
+        "y": 6,
+        "z": 0,
+        "mobility": "mobile"
+      },
+      {
+        "id": "V2",
+        "label": "Engineer - IT Lab",
+        "x": 15,
+        "y": 2,
+        "z": 1,
+        "mobility": "mobile"
+      },
+      {
+        "id": "V3",
+        "label": "Manager - South Office",
+        "x": 3,
+        "y": 10,
+        "z": 2,
+        "mobility": "injured"
+      },
+      {
+        "id": "V4",
+        "label": "Director - Top Floor",
+        "x": 10,
+        "y": 2,
+        "z": 3,
+        "mobility": "immobile"
+      }
+    ],
+    "threat": {
+      "type": "fire",
+      "origin": {
+        "x": 16,
+        "y": 3,
+        "z": 0
+      },
+      "fire_params": {
+        "spread_probability": 0.25,
+        "stairwell_acceleration": 1.2,
+        "accelerant_bonus": 0.25
+      }
+    },
+    "simulation_config": {
+      "max_turns": 70,
+      "elevator_enabled": false,
+      "urgency_weight": 1.5,
+      "contention_penalty": 0.5
+    }
+  }
+}
