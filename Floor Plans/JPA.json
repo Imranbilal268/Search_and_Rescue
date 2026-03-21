@@ -1,144 +1,272 @@
 {
-    "building": {
+  "$schema": "rescuegrid-v1",
+  "building": {
+    "meta": {
+      "schema_version": "1.0",
       "name": "The Pavilions — 2112 Jefferson Park Ave, Charlottesville VA 22903",
-      "address": "2112 Jefferson Park Ave, Charlottesville, VA 22903",
-      "built": 1992,
       "floors": 3,
       "width": 22,
-      "height": 14,
-      "unit_types": {
-        "flat":      "4-bedroom flat: 2 beds + bath each end, great-room and kitchen center (floor 0)",
-        "townhouse_lower": "Townhouse lower: 1 bedroom, 1 bath, great-room, galley kitchen, balcony (floor 1)",
-        "townhouse_upper": "Townhouse upper: 3 bedrooms, 2 baths, washer/dryer (floor 2)"
-      },
-      "grid": [
-        [
-          ["wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
-          ["window","floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "window"],
-          ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "stairwell","stairwell","floor","floor","floor","floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "stairwell","stairwell","floor","floor","floor","floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall"  ],
-          ["window","floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "window"],
-          ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall"  ]
-        ],
-        [
-          ["wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "wall",  "wall",  "wall",  "door",  "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ],
-          ["wall",  "wall",  "door",  "wall",  "wall",  "wall",  "floor", "floor", "floor", "wall",  "stairwell","stairwell","floor","floor","floor","floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "stairwell","stairwell","floor","floor","floor","floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ]
-        ],
-        [
-          ["wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "window"],
-          ["wall",  "floor", "floor", "floor", "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "window"],
-          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
-          ["wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ]
-        ]
+      "height": 14
+    },
+    "grid": [
+      [
+        ["wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
+        ["window","floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "window"],
+        ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "stairwell","stairwell","floor","floor","floor","floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "stairwell","stairwell","floor","floor","floor","floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall"  ],
+        ["window","floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "window"],
+        ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall"  ]
       ],
-      "cell_properties": {
-        "3,0,0":   { "type": "window",    "label": "Bedroom 1 north window",      "material": "glass", "exit": false, "traversal_cost": 5 },
-        "11,0,0":  { "type": "window",    "label": "Great-room north window",     "material": "glass", "exit": false, "traversal_cost": 5 },
-        "19,0,0":  { "type": "window",    "label": "Bedroom 4 north window",      "material": "glass", "exit": false, "traversal_cost": 5 },
-        "0,2,0":   { "type": "window",    "label": "Bedroom 1 west window",       "material": "glass", "exit": true,  "requires": "ladder", "traversal_cost": 3 },
-        "21,2,0":  { "type": "window",    "label": "Bedroom 4 east window",       "material": "glass", "exit": false, "traversal_cost": 5 },
-        "3,4,0":   { "type": "door",      "label": "Bedroom 1 to hallway",        "locked": false, "material": "wood" },
-        "18,4,0":  { "type": "door",      "label": "Bedroom 4 to hallway",        "locked": false, "material": "wood" },
-        "3,9,0":   { "type": "door",      "label": "Bedroom 2 to hallway",        "locked": false, "material": "wood" },
-        "18,9,0":  { "type": "door",      "label": "Bedroom 3 to hallway",        "locked": false, "material": "wood" },
-        "0,10,0":  { "type": "window",    "label": "Bedroom 2 west window",       "material": "glass", "exit": true,  "requires": "ladder", "traversal_cost": 3 },
-        "21,10,0": { "type": "window",    "label": "Bedroom 3 east window",       "material": "glass", "exit": false, "traversal_cost": 5 },
-        "3,13,0":  { "type": "window",    "label": "Bedroom 2 south window",      "material": "glass", "exit": true,  "requires": "ladder", "traversal_cost": 3 },
-        "11,13,0": { "type": "window",    "label": "Great-room south window",     "material": "glass", "exit": false, "traversal_cost": 5 },
-        "19,13,0": { "type": "window",    "label": "Bedroom 3 south window",      "material": "glass", "exit": false, "traversal_cost": 5 },
-        "0,2,1":   { "type": "window",    "label": "Bedroom 1 west window",       "material": "glass", "exit": true,  "requires": "ladder", "traversal_cost": 3 },
-        "2,6,1":   { "type": "door",      "label": "Bedroom 1 door",              "locked": false, "material": "wood" },
-        "8,3,1":   { "type": "door",      "label": "Bathroom 1 door",             "locked": false, "material": "wood" },
-        "13,5,1":  { "type": "door",      "label": "Balcony/patio sliding door",  "locked": false, "is_exit": true, "material": "wood" },
-        "0,11,1":  { "type": "window",    "label": "Great-room west window",      "material": "glass", "exit": false, "traversal_cost": 5 },
-        "2,13,1":  { "type": "window",    "label": "Kitchen south window",        "material": "glass", "exit": false, "traversal_cost": 5 },
-        "8,13,1":  { "type": "window",    "label": "Great-room south window",     "material": "glass", "exit": false, "traversal_cost": 5 },
-        "10,6,0":  { "type": "stairwell", "label": "Stairwell floor 0 — up only",  "connects_to_floor": 1, "direction": "up",   "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0, "material": "wood" },
-        "10,7,0":  { "type": "stairwell", "connects_to_floor": 1, "direction": "up",   "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0, "material": "wood" },
-        "11,6,0":  { "type": "stairwell", "connects_to_floor": 1, "direction": "up",   "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0, "material": "wood" },
-        "11,7,0":  { "type": "stairwell", "connects_to_floor": 1, "direction": "up",   "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0, "material": "wood" },
-        "10,6,1":  { "type": "stairwell", "label": "Stairwell floor 1 — down only", "connects_to_floor": 0, "direction": "down", "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0, "material": "wood" },
-        "10,7,1":  { "type": "stairwell", "connects_to_floor": 0, "direction": "down", "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0, "material": "wood" },
-        "11,6,1":  { "type": "stairwell", "connects_to_floor": 0, "direction": "down", "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0, "material": "wood" },
-        "11,7,1":  { "type": "stairwell", "connects_to_floor": 0, "direction": "down", "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0, "material": "wood" },
-        "0,2,2":   { "type": "window",    "label": "Bedroom A west window",       "material": "glass", "exit": false, "traversal_cost": 8 },
-        "21,2,2":  { "type": "window",    "label": "Bedroom C east window",       "material": "glass", "exit": false, "traversal_cost": 8 },
-        "6,3,2":   { "type": "door",      "label": "Bedroom A door",              "locked": false, "material": "wood" },
-        "10,6,2":  { "type": "door",      "label": "Bedroom B door",              "locked": false, "material": "wood" },
-        "14,3,2":  { "type": "door",      "label": "Bedroom C door",              "locked": false, "material": "wood" },
-        "2,6,2":   { "type": "door",      "label": "Bathroom 2 door",             "locked": false, "material": "wood" },
-        "0,11,2":  { "type": "window",    "label": "Hallway west window",         "material": "glass", "exit": false, "traversal_cost": 8 },
-        "21,11,2": { "type": "window",    "label": "Bedroom C east window lower", "material": "glass", "exit": false, "traversal_cost": 8 },
-        "2,13,2":  { "type": "window",    "label": "Bedroom A south window",      "material": "glass", "exit": false, "traversal_cost": 8 },
-        "8,13,2":  { "type": "window",    "label": "Bedroom B south window",      "material": "glass", "exit": false, "traversal_cost": 8 },
-        "13,13,2": { "type": "window",    "label": "Bedroom C south window",      "material": "glass", "exit": false, "traversal_cost": 8 }
-      },
-      "exit_nodes": [
-        { "x": 11, "y": 7,  "z": 0, "label": "Flat unit front door" },
-        { "x": 13, "y": 5,  "z": 1, "label": "Townhouse balcony sliding door" }
+      [
+        ["wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "wall",  "wall",  "wall",  "door",  "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ],
+        ["wall",  "wall",  "door",  "wall",  "wall",  "wall",  "floor", "floor", "floor", "wall",  "stairwell","stairwell","floor","floor","floor","floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "stairwell","stairwell","floor","floor","floor","floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ]
       ],
-      "room_labels": {
-        "2,2,0":   "Bedroom 1",
-        "2,11,0":  "Bedroom 2",
-        "10,6,0":  "Great-room",
-        "10,2,0":  "Kitchen",
-        "19,2,0":  "Bedroom 4",
-        "19,11,0": "Bedroom 3",
-        "2,2,1":   "Bedroom 1",
-        "6,4,1":   "Bathroom 1",
-        "10,7,1":  "Great-room",
-        "10,2,1":  "Galley kitchen",
-        "17,7,1":  "Balcony / patio",
-        "2,4,2":   "Bedroom A",
-        "6,4,2":   "Bedroom B",
-        "15,4,2":  "Bedroom C",
-        "6,2,2":   "Bathroom 2",
-        "15,2,2":  "Bathroom 3",
-        "10,8,2":  "Upper hallway"
+      [
+        ["wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "window"],
+        ["wall",  "floor", "floor", "floor", "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "window"],
+        ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall"  ],
+        ["wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ]
+      ]
+    ],
+    "cell_properties": {
+      "3,0,0":   { "label": "Bedroom 1 north window" },
+      "11,0,0":  { "label": "Great-room north window" },
+      "19,0,0":  { "label": "Bedroom 4 north window" },
+      "0,2,0":   { "requires": "ladder", "label": "Bedroom 1 west window" },
+      "21,2,0":  { "label": "Bedroom 4 east window" },
+      "3,4,0":   { "locked": false, "label": "Bedroom 1 to hallway" },
+      "18,4,0":  { "locked": false, "label": "Bedroom 4 to hallway" },
+      "3,9,0":   { "locked": false, "label": "Bedroom 2 to hallway" },
+      "18,9,0":  { "locked": false, "label": "Bedroom 3 to hallway" },
+      "0,10,0":  { "requires": "ladder", "label": "Bedroom 2 west window" },
+      "21,10,0": { "label": "Bedroom 3 east window" },
+      "3,13,0":  { "requires": "ladder", "label": "Bedroom 2 south window" },
+      "11,13,0": { "label": "Great-room south window" },
+      "19,13,0": { "label": "Bedroom 3 south window" },
+      "0,2,1":   { "requires": "ladder", "label": "Bedroom 1 west window" },
+      "2,6,1":   { "locked": false, "label": "Bedroom 1 door" },
+      "8,3,1":   { "locked": false, "label": "Bathroom 1 door" },
+      "13,5,1":  { "locked": false, "label": "Balcony/patio sliding door" },
+      "0,11,1":  { "label": "Great-room west window" },
+      "2,13,1":  { "label": "Kitchen south window" },
+      "8,13,1":  { "label": "Great-room south window" },
+      "0,2,2":   { "requires": "ladder", "label": "Bedroom A west window" },
+      "21,2,2":  { "requires": "ladder", "label": "Bedroom C east window" },
+      "6,3,2":   { "locked": false, "label": "Bedroom A door" },
+      "10,6,2":  { "locked": false, "label": "Bedroom B door" },
+      "14,3,2":  { "locked": false, "label": "Bedroom C door" },
+      "2,6,2":   { "locked": false, "label": "Bathroom 2 door" },
+      "0,11,2":  { "label": "Hallway west window" },
+      "21,11,2": { "label": "Bedroom C east window lower" },
+      "2,13,2":  { "label": "Bedroom A south window" },
+      "8,13,2":  { "label": "Bedroom B south window" },
+      "13,13,2": { "label": "Bedroom C south window" }
+    },
+    "vertical_connections": [
+      {
+        "id": "stairwell_main",
+        "type": "stairwell",
+        "label": "Main Stairwell",
+        "x": 10,
+        "y": 6,
+        "floors": [0, 1],
+        "traversal_cost": 3,
+        "victim_carry_cost_multiplier": 2.0
       },
-      "materials": {
-        "wall":      "brick",
-        "floor":     "wood",
-        "door":      "wood",
-        "window":    "glass",
-        "stairwell": "wood",
-        "ceiling":   "wood"
-  
+      {
+        "id": "window_bedroom1_west",
+        "type": "window",
+        "label": "Bedroom 1 West Window Exit",
+        "x": 0,
+        "y": 2,
+        "floor": 0,
+        "traversal_cost": 5,
+        "requires": null
+      },
+      {
+        "id": "window_bedroom2_west",
+        "type": "window",
+        "label": "Bedroom 2 West Window Exit",
+        "x": 0,
+        "y": 10,
+        "floor": 0,
+        "traversal_cost": 5,
+        "requires": null
+      },
+      {
+        "id": "window_bedroom2_south",
+        "type": "window",
+        "label": "Bedroom 2 South Window Exit",
+        "x": 3,
+        "y": 13,
+        "floor": 0,
+        "traversal_cost": 5,
+        "requires": null
+      },
+      {
+        "id": "window_townhouse_west",
+        "type": "window",
+        "label": "Townhouse West Window",
+        "x": 0,
+        "y": 2,
+        "floor": 1,
+        "traversal_cost": 7,
+        "requires": "ladder"
+      },
+      {
+        "id": "window_bedroom_a_west",
+        "type": "window",
+        "label": "Bedroom A West Window",
+        "x": 0,
+        "y": 2,
+        "floor": 2,
+        "traversal_cost": 9,
+        "requires": "ladder"
+      },
+      {
+        "id": "window_bedroom_c_east",
+        "type": "window",
+        "label": "Bedroom C East Window",
+        "x": 21,
+        "y": 2,
+        "floor": 2,
+        "traversal_cost": 9,
+        "requires": "ladder"
+      }
+    ],
+    "exit_nodes": [
+      {
+        "id": "exit_flat_front",
+        "x": 11,
+        "y": 7,
+        "z": 0,
+        "label": "Flat Unit Front Door",
+        "always_open": true
+      },
+      {
+        "id": "exit_balcony",
+        "x": 13,
+        "y": 5,
+        "z": 1,
+        "label": "Townhouse Balcony Sliding Door",
+        "always_open": true
+      }
+    ],
+    "floor_labels": {
+      "0": "Ground Floor — 4-Bedroom Flat",
+      "1": "Townhouse Lower",
+      "2": "Townhouse Upper"
+    }
+  },
+  "scenario": {
+    "responders": [
+      {
+        "id": "R1",
+        "label": "Alpha - Breacher",
+        "x": 11,
+        "y": 7,
+        "z": 0,
+        "equipment": ["ax", "medic_kit"]
+      },
+      {
+        "id": "R2",
+        "label": "Bravo - Climber",
+        "x": 11,
+        "y": 7,
+        "z": 0,
+        "equipment": ["ladder"]
+      },
+      {
+        "id": "R3",
+        "label": "Charlie - Support",
+        "x": 11,
+        "y": 7,
+        "z": 0,
+        "equipment": ["drone"]
+      }
+    ],
+    "victims": [
+      {
+        "id": "V1",
+        "label": "Resident - Bedroom 1 Ground Floor",
+        "x": 2,
+        "y": 2,
+        "z": 0,
+        "mobility": "mobile"
+      },
+      {
+        "id": "V2",
+        "label": "Resident - Bedroom 3 Ground Floor",
+        "x": 19,
+        "y": 11,
+        "z": 0,
+        "mobility": "mobile"
+      },
+      {
+        "id": "V3",
+        "label": "Resident - Townhouse Bedroom",
+        "x": 2,
+        "y": 2,
+        "z": 1,
+        "mobility": "injured"
+      },
+      {
+        "id": "V4",
+        "label": "Resident - Bedroom A Upper Floor",
+        "x": 2,
+        "y": 4,
+        "z": 2,
+        "mobility": "immobile"
+      }
+    ],
+    "threat": {
+      "type": "fire",
+      "origin": {
+        "x": 10,
+        "y": 2,
+        "z": 0
+      },
+      "fire_params": {
+        "spread_probability": 0.35,
+        "stairwell_acceleration": 2.0,
+        "accelerant_bonus": 0.2
       }
     },
-    "scenario": {
-      "responders": [],
-      "victims": [],
-      "threat": null
+    "simulation_config": {
+      "max_turns": 50,
+      "elevator_enabled": false,
+      "urgency_weight": 1.5,
+      "contention_penalty": 0.5
     }
   }
+}
