@@ -1,0 +1,234 @@
+{
+  "$schema": "rescuegrid-v1",
+  "building": {
+    "meta": {
+      "schema_version": "1.0",
+      "name": "Phase 0 Test School",
+      "floors": 3,
+      "width": 16,
+      "height": 12
+    },
+    "grid": null,
+    "cell_properties": {
+      "5,5,0": {
+        "locked": true,
+        "requires": "ax",
+        "label": "Main Office"
+      },
+      "10,5,0": {
+        "locked": true,
+        "requires": "ax",
+        "label": "IT Closet"
+      },
+      "3,2,0": {
+        "label": "Cafeteria",
+        "fire_accelerant": true
+      },
+      "10,7,1": {
+        "label": "Science Lab",
+        "fire_accelerant": true
+      },
+      "6,6,0": {
+        "traversal_cost_multiplier": 3.0,
+        "label": "Collapsed Lobby"
+      },
+      "15,5,0": {
+        "requires": null,
+        "label": "Ground Floor East Window"
+      },
+      "15,5,1": {
+        "requires": "ladder",
+        "label": "First Floor East Window"
+      },
+      "15,5,2": {
+        "requires": "ladder",
+        "label": "Second Floor East Window"
+      }
+    },
+    "vertical_connections": [
+      {
+        "id": "stairwell_west",
+        "type": "stairwell",
+        "label": "West Stairwell",
+        "x": 3,
+        "y": 3,
+        "floors": [
+          0,
+          1,
+          2
+        ],
+        "traversal_cost": 3,
+        "victim_carry_cost_multiplier": 2.0
+      },
+      {
+        "id": "stairwell_east",
+        "type": "stairwell",
+        "label": "East Stairwell",
+        "x": 12,
+        "y": 3,
+        "floors": [
+          0,
+          1
+        ],
+        "traversal_cost": 3,
+        "victim_carry_cost_multiplier": 2.0
+      },
+      {
+        "id": "window_ground",
+        "type": "window",
+        "label": "Ground Floor East Window",
+        "x": 15,
+        "y": 5,
+        "floor": 0,
+        "traversal_cost": 5,
+        "requires": null
+      },
+      {
+        "id": "window_first",
+        "type": "window",
+        "label": "First Floor East Window",
+        "x": 15,
+        "y": 5,
+        "floor": 1,
+        "traversal_cost": 7,
+        "requires": "ladder"
+      },
+      {
+        "id": "window_second",
+        "type": "window",
+        "label": "Second Floor East Window",
+        "x": 15,
+        "y": 5,
+        "floor": 2,
+        "traversal_cost": 9,
+        "requires": "ladder"
+      },
+      {
+        "id": "elevator_central",
+        "type": "elevator",
+        "label": "Central Elevator",
+        "x": 8,
+        "y": 5,
+        "floors": [
+          0,
+          1,
+          2
+        ],
+        "traversal_cost": 2,
+        "victim_carry_cost_multiplier": 1.0,
+        "default_passable": false
+      }
+    ],
+    "exit_nodes": [
+      {
+        "id": "exit_main",
+        "x": 8,
+        "y": 1,
+        "z": 0,
+        "label": "Main Entrance",
+        "always_open": true
+      },
+      {
+        "id": "exit_west",
+        "x": 0,
+        "y": 6,
+        "z": 0,
+        "label": "West Fire Exit",
+        "always_open": true
+      },
+      {
+        "id": "exit_east",
+        "x": 15,
+        "y": 6,
+        "z": 0,
+        "label": "East Fire Exit",
+        "always_open": false
+      }
+    ],
+    "floor_labels": {
+      "0": "Ground Floor",
+      "1": "First Floor",
+      "2": "Second Floor"
+    }
+  },
+  "scenario": {
+    "responders": [
+      {
+        "id": "R1",
+        "label": "Alpha - Breacher",
+        "x": 1,
+        "y": 6,
+        "z": 0,
+        "equipment": [
+          "ax",
+          "medic_kit"
+        ]
+      },
+      {
+        "id": "R2",
+        "label": "Bravo - Climber",
+        "x": 1,
+        "y": 6,
+        "z": 0,
+        "equipment": [
+          "ladder"
+        ]
+      },
+      {
+        "id": "R3",
+        "label": "Charlie - Support",
+        "x": 1,
+        "y": 6,
+        "z": 0,
+        "equipment": [
+          "drone"
+        ]
+      }
+    ],
+    "victims": [
+      {
+        "id": "V1",
+        "label": "Student - East Corridor",
+        "x": 9,
+        "y": 6,
+        "z": 0,
+        "mobility": "mobile"
+      },
+      {
+        "id": "V2",
+        "label": "Teacher - First Floor",
+        "x": 4,
+        "y": 2,
+        "z": 1,
+        "mobility": "injured"
+      },
+      {
+        "id": "V3",
+        "label": "Staff - Second Floor",
+        "x": 9,
+        "y": 2,
+        "z": 2,
+        "mobility": "immobile"
+      }
+    ],
+    "threat": {
+      "type": "fire",
+      "origin": {
+        "x": 13,
+        "y": 2,
+        "z": 0
+      },
+      "fire_params": {
+        "spread_probability": 0.25,
+        "stairwell_acceleration": 1.5,
+        "accelerant_bonus": 0.2
+      }
+    },
+    "simulation_config": {
+      "max_turns": 50,
+      "elevator_enabled": false,
+      "urgency_weight": 1.5,
+      "contention_penalty": 0.5
+    }
+  }
+}
