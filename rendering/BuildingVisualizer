@@ -100,6 +100,12 @@ canvas{display:block}
 .ly-iso-btn.active{color:#ff8844;border-color:rgba(255,136,68,.3);background:rgba(255,136,68,.06)}
 .ly-iso-btn.accent{border-color:rgba(91,240,165,.12);color:rgba(91,240,165,.4)}
 .ly-iso-btn.accent:hover{color:var(--accent);border-color:var(--accent)}
+/* Build tools */
+.tool-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:3px;margin-bottom:4px}
+.tool-btn{padding:4px 1px;border-radius:5px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);color:rgba(255,255,255,.3);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:7px;text-align:center;transition:all .12s;white-space:nowrap;overflow:hidden}
+.tool-btn:hover{color:rgba(255,255,255,.7);background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
+.tool-btn.active{color:var(--accent);border-color:rgba(91,240,165,.25);background:rgba(91,240,165,.06)}
+.tool-info{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:rgba(255,255,255,.2);padding:2px 0 4px;min-height:14px}
 /* Layer rows - enhanced */
 .layer-row .ly-bar-wrap{width:40px;height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;flex-shrink:0}
 .layer-row .ly-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .2s}
@@ -175,7 +181,7 @@ canvas{display:block}
     <button class="dim-btn active" data-dim="3d" onclick="setDim('3d')">3D</button>
     <button class="dim-btn" data-dim="2d" onclick="setDim('2d')">2D PLAN</button>
   </div>
-  <div class="plan-info" id="planInfo">Layer Y<span id="pi-y">0</span> · <span id="pi-m">0.00m</span> · LMB paint · RMB erase · MMB pan · Ctrl+click pick · [/] layers · X mode</div>
+  <div class="plan-info" id="planInfo">Layer Y<span id="pi-y">0</span> · <span id="pi-m">0.00m</span> · LMB tool action · RMB erase/cancel · MMB pan · Esc cancel · [/] layers</div>
 
   <!-- TOP-LEFT: Title -->
   <div class="top-left"><h1>Block Builder</h1><span class="subtitle">Fire &amp; Structure Sim</span></div>
@@ -198,12 +204,22 @@ canvas{display:block}
           <button class="mode-btn2" data-mode="erase" onclick="setMode('erase')">ERASE</button>
           <button class="mode-btn2 active" id="physBtn" onclick="togglePhysics()" title="Pause/Play physics (P)" style="flex:.8">⏸ Pause</button>
         </div>
+        <div class="sec-label">Tools (2D)</div>
+        <div class="tool-grid">
+          <button class="tool-btn active" data-tool="pen" onclick="setTool('pen')" title="Single block">✏️ Pen</button>
+          <button class="tool-btn" data-tool="line" onclick="setTool('line')" title="Line between 2 points">📏 Line</button>
+          <button class="tool-btn" data-tool="rect" onclick="setTool('rect')" title="Fill rectangle">⬜ Rect</button>
+          <button class="tool-btn" data-tool="wall" onclick="setTool('wall')" title="Auto wall (full height)">🧱 Wall</button>
+          <button class="tool-btn" data-tool="room" onclick="setTool('room')" title="4-wall room">🏗️ Room</button>
+          <button class="tool-btn" data-tool="flood" onclick="setTool('flood')" title="Flood fill empty area">🪣 Fill</button>
+          <button class="tool-btn" data-tool="replace" onclick="setTool('replace')" title="Replace connected same-type">🔄 Replace</button>
+          <button class="tool-btn" data-tool="replall" onclick="setTool('replall')" title="Replace ALL of a type on layer">🔃 Repl All</button>
+        </div>
+        <div class="tool-info" id="toolInfo">Pen: click to place blocks</div>
         <div class="sec-label">Presets</div>
-        <button class="cp-btn" onclick="spawnPreset('apartment')"><span class="cp-icon">🏢</span><span class="cp-info"><span class="cp-name">Apartment</span><span class="cp-desc">5-floor · stairwell</span></span></button>
-        <button class="cp-btn" onclick="spawnPreset('school')"><span class="cp-icon">🏫</span><span class="cp-info"><span class="cp-name">School</span><span class="cp-desc">2-floor · classrooms</span></span></button>
-        <button class="cp-btn" onclick="spawnPreset('gasstation')"><span class="cp-icon">⛽</span><span class="cp-info"><span class="cp-name">Gas Station</span><span class="cp-desc">canopy · fuel tanks</span></span></button>
-        <button class="cp-btn" onclick="spawnPreset('house')"><span class="cp-icon">🏠</span><span class="cp-info"><span class="cp-name">Family Home</span><span class="cp-desc">2-floor · 4 bed · garage</span></span></button>
-        <button class="cp-btn" onclick="spawnPreset('stairdemo')"><span class="cp-icon">🪜</span><span class="cp-info"><span class="cp-name">Stair Tower</span><span class="cp-desc">3-floor · stair types</span></span></button>
+        <button class="cp-btn" onclick="spawnPreset('house')"><span class="cp-icon">🏠</span><span class="cp-info"><span class="cp-name">Suburban House</span><span class="cp-desc">2-floor · 3 bed · garage</span></span></button>
+        <button class="cp-btn" onclick="spawnPreset('office')"><span class="cp-icon">🏢</span><span class="cp-info"><span class="cp-name">Office Building</span><span class="cp-desc">3-floor · open plan · conf rooms</span></span></button>
+        <button class="cp-btn" onclick="spawnPreset('firestation')"><span class="cp-icon">🚒</span><span class="cp-info"><span class="cp-name">Fire Station</span><span class="cp-desc">2-floor · 2 bays · bunk rooms</span></span></button>
         <div class="sec-label">Floorplan</div>
         <button class="cp-btn import" onclick="openImport()"><span class="cp-icon">📐</span><span class="cp-info"><span class="cp-name">Import JSON</span><span class="cp-desc">paste floorplan data</span></span></button>
         <div style="height:6px"></div>
@@ -523,6 +539,279 @@ function toggleToolbar(){
   btn.title=tb.classList.contains('hidden')?'Show materials (M)':'Hide materials (M)';
 }
 
+// ===== BUILD TOOLS =====
+let buildTool='pen'; // pen, line, rect, wall, room, flood
+let toolAnchor=null; // {gx,gz} first click point for 2-click tools
+const WALL_H_TOOL=3; // wall height for auto-wall tools
+const TOOL_DESCS={
+  pen:'Pen: click/drag to place or erase',
+  line:'Line: click start → end (place or erase)',
+  rect:'Rect: click corner → corner (fill or clear)',
+  wall:'Wall: click start → end (full height place/erase)',
+  room:'Room: click corner → corner (build or demolish)',
+  flood:'Fill: click to fill empty / erase connected same-type',
+  replace:'Replace: click a block → replaces connected same-type with selected material',
+  replall:'Replace All: click a block → replaces ALL of that type on this layer'
+};
+
+function setTool(t){
+  buildTool=t;toolAnchor=null;
+  document.querySelectorAll('.tool-btn').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));
+  document.getElementById('toolInfo').textContent=TOOL_DESCS[t]||'';
+  if(dimMode==='2d') draw2d();
+}
+
+// Get cells along a line (Bresenham)
+function lineCells(x0,z0,x1,z1){
+  const cells=[];
+  let dx=Math.abs(x1-x0),dz=Math.abs(z1-z0);
+  let sx=x0<x1?1:-1, sz=z0<z1?1:-1;
+  let err=dx-dz;
+  while(true){
+    cells.push([x0,z0]);
+    if(x0===x1&&z0===z1) break;
+    const e2=2*err;
+    if(e2>-dz){err-=dz;x0+=sx;}
+    if(e2<dx){err+=dx;z0+=sz;}
+  }
+  return cells;
+}
+
+// Get cells in a filled rectangle
+function rectCells(x0,z0,x1,z1){
+  const cells=[];
+  const mnx=Math.min(x0,x1),mxx=Math.max(x0,x1);
+  const mnz=Math.min(z0,z1),mxz=Math.max(z0,z1);
+  for(let x=mnx;x<=mxx;x++) for(let z=mnz;z<=mxz;z++) cells.push([x,z]);
+  return cells;
+}
+
+// Get cells for room perimeter (4 walls)
+function roomCells(x0,z0,x1,z1){
+  const cells=[];
+  const mnx=Math.min(x0,x1),mxx=Math.max(x0,x1);
+  const mnz=Math.min(z0,z1),mxz=Math.max(z0,z1);
+  for(let x=mnx;x<=mxx;x++){cells.push([x,mnz]);cells.push([x,mxz]);}
+  for(let z=mnz+1;z<mxz;z++){cells.push([mnx,z]);cells.push([mxx,z]);}
+  return cells;
+}
+
+// Flood fill empty cells from a starting point
+function floodFillCells(sx,sz,y){
+  const filled=[];
+  const visited=new Set();
+  const queue=[[sx,sz]];
+  visited.add(sx+','+sz);
+  const half=GRID/2;
+  const MAX=500;
+  while(queue.length&&filled.length<MAX){
+    const[cx,cz]=queue.shift();
+    if(cx<-half||cx>=half||cz<-half||cz>=half) continue;
+    if(placed.has(K(cx,y,cz))) continue;
+    filled.push([cx,cz]);
+    for(const[dx,dz]of[[1,0],[-1,0],[0,1],[0,-1]]){
+      const nk=(cx+dx)+','+(cz+dz);
+      if(!visited.has(nk)){visited.add(nk);queue.push([cx+dx,cz+dz]);}
+    }
+  }
+  return filled;
+}
+
+// Flood erase: find connected occupied blocks of same type from starting point
+function floodEraseCells(sx,sz,y){
+  const startKey=K(sx,y,sz);
+  const startEntry=placed.get(startKey);
+  if(!startEntry) return [];
+  const targetType=startEntry.type;
+  const filled=[];
+  const visited=new Set();
+  const queue=[[sx,sz]];
+  visited.add(sx+','+sz);
+  const half=GRID/2;
+  const MAX=500;
+  while(queue.length&&filled.length<MAX){
+    const[cx,cz]=queue.shift();
+    if(cx<-half||cx>=half||cz<-half||cz>=half) continue;
+    const e=placed.get(K(cx,y,cz));
+    if(!e||e.type!==targetType) continue;
+    filled.push([cx,cz]);
+    for(const[dx,dz]of[[1,0],[-1,0],[0,1],[0,-1]]){
+      const nk=(cx+dx)+','+(cz+dz);
+      if(!visited.has(nk)){visited.add(nk);queue.push([cx+dx,cz+dz]);}
+    }
+  }
+  return filled;
+}
+
+// --- PLACE execution ---
+function execToolPlace(cells,y){
+  const prev=selectedBlock;
+  for(const[x,z]of cells) addBlock(x,y,z,selectedBlock);
+  selectedBlock=prev;
+  for(const[x,z]of cells) rebuildNbrs(x,y,z);
+  for(const[x,z]of cells) rebuildGeo(K(x,y,z));
+  updateStats();
+  if(dimMode==='2d') draw2d();
+}
+
+function execWallPlace(cells,baseY){
+  const prev=selectedBlock;
+  for(const[x,z]of cells){
+    addBlock(x,baseY,z,Ty.CONCRETE);
+    for(let h=1;h<=WALL_H_TOOL;h++) addBlock(x,baseY+h,z,selectedBlock);
+  }
+  selectedBlock=prev;
+  for(const[x,z]of cells) for(let h=0;h<=WALL_H_TOOL;h++) rebuildGeo(K(x,baseY+h,z));
+  for(const[x,z]of cells) rebuildNbrs(x,baseY,z);
+  updateStats();
+  if(dimMode==='2d') draw2d();
+}
+
+function execRoomPlace(x0,z0,x1,z1,baseY){
+  const prev=selectedBlock;
+  const mnx=Math.min(x0,x1),mxx=Math.max(x0,x1);
+  const mnz=Math.min(z0,z1),mxz=Math.max(z0,z1);
+  for(let x=mnx;x<=mxx;x++) for(let z=mnz;z<=mxz;z++) addBlock(x,baseY,z,Ty.CONCRETE);
+  const wallCells=roomCells(x0,z0,x1,z1);
+  for(const[x,z]of wallCells) for(let h=1;h<=WALL_H_TOOL;h++) addBlock(x,baseY+h,z,selectedBlock);
+  const midX=Math.round((mnx+mxx)/2), midZ=Math.round((mnz+mxz)/2);
+  const doorPositions=[[midX,mnz],[midX,mxz],[mnx,midZ],[mxx,midZ]];
+  for(const[dx,dz]of doorPositions){
+    const dk=K(dx,baseY+1,dz);
+    if(placed.has(dk)){const e=placed.get(dk);scene.remove(e.mesh);e.mesh.geometry.dispose();e.mesh.material.dispose();placed.delete(dk);}
+    addBlock(dx,baseY+1,dz,Ty.DOORFRM);
+    const dk2=K(dx,baseY+2,dz);
+    if(placed.has(dk2)){const e=placed.get(dk2);scene.remove(e.mesh);e.mesh.geometry.dispose();e.mesh.material.dispose();placed.delete(dk2);}
+    addBlock(dx,baseY+2,dz,Ty.DOORPNL);
+  }
+  selectedBlock=prev;
+  for(let x=mnx;x<=mxx;x++) for(let z=mnz;z<=mxz;z++) for(let h=0;h<=WALL_H_TOOL;h++) rebuildGeo(K(x,baseY+h,z));
+  updateStats();
+  if(dimMode==='2d') draw2d();
+}
+
+// --- ERASE execution ---
+function execToolErase(cells,y){
+  for(const[x,z]of cells) removeBlock(x,y,z);
+  updateStats();
+  if(dimMode==='2d') draw2d();
+}
+
+function execWallErase(cells,baseY){
+  for(const[x,z]of cells) for(let h=0;h<=WALL_H_TOOL;h++) removeBlock(x,baseY+h,z);
+  updateStats();
+  if(dimMode==='2d') draw2d();
+}
+
+function execRoomErase(x0,z0,x1,z1,baseY){
+  const wallCells=roomCells(x0,z0,x1,z1);
+  for(const[x,z]of wallCells) for(let h=0;h<=WALL_H_TOOL;h++) removeBlock(x,baseY+h,z);
+  updateStats();
+  if(dimMode==='2d') draw2d();
+}
+
+// Handle tool click in 2D (works in both place and erase modes)
+// Replace connected blocks of same type with selected material
+function execReplace(sx,sz,y){
+  const startEntry=placed.get(K(sx,y,sz));
+  if(!startEntry) return;
+  const fromType=startEntry.type, toType=selectedBlock;
+  if(fromType===toType) return;
+  const cells=[],visited=new Set(),queue=[[sx,sz]],half=GRID/2;
+  visited.add(sx+','+sz);
+  while(queue.length&&cells.length<500){
+    const[cx,cz]=queue.shift();
+    if(cx<-half||cx>=half||cz<-half||cz>=half) continue;
+    const e=placed.get(K(cx,y,cz));
+    if(!e||e.type!==fromType) continue;
+    cells.push([cx,cz]);
+    for(const[dx,dz]of[[1,0],[-1,0],[0,1],[0,-1]]){
+      const nk=(cx+dx)+','+(cz+dz);
+      if(!visited.has(nk)){visited.add(nk);queue.push([cx+dx,cz+dz]);}
+    }
+  }
+  for(const[x,z]of cells){removeBlock(x,y,z);addBlock(x,y,z,toType);}
+  for(const[x,z]of cells){rebuildGeo(K(x,y,z));rebuildNbrs(x,y,z);}
+  updateStats();if(dimMode==='2d') draw2d();
+}
+
+// Replace ALL blocks of a type on current layer
+function execReplaceAll(sx,sz,y){
+  const startEntry=placed.get(K(sx,y,sz));
+  if(!startEntry) return;
+  const fromType=startEntry.type, toType=selectedBlock;
+  if(fromType===toType) return;
+  const cells=[];
+  for(const[,e]of placed){if(e.gy===y&&e.type===fromType) cells.push([e.gx,e.gz]);}
+  for(const[x,z]of cells){removeBlock(x,y,z);addBlock(x,y,z,toType);}
+  for(const[x,z]of cells){rebuildGeo(K(x,y,z));rebuildNbrs(x,y,z);}
+  updateStats();if(dimMode==='2d') draw2d();
+}
+
+function toolClick2D(gx,gz){
+  if(buildTool==='pen') return false;
+  const erasing=mode==='erase';
+
+  // One-click tools
+  if(buildTool==='flood'){
+    if(erasing){
+      const cells=floodEraseCells(gx,gz,currentLayer);
+      if(cells.length>0) execToolErase(cells,currentLayer);
+    }else{
+      const cells=floodFillCells(gx,gz,currentLayer);
+      if(cells.length>0) execToolPlace(cells,currentLayer);
+    }
+    return true;
+  }
+  if(buildTool==='replace'){
+    execReplace(gx,gz,currentLayer);
+    return true;
+  }
+  if(buildTool==='replall'){
+    execReplaceAll(gx,gz,currentLayer);
+    return true;
+  }
+
+  // Two-click tools
+  if(!toolAnchor){
+    toolAnchor={gx,gz};
+    const verb=erasing?'erase to':'place to';
+    document.getElementById('toolInfo').textContent=TOOL_DESCS[buildTool].split(':')[0]+': click endpoint ('+verb+')...';
+    draw2d();
+    return true;
+  }
+
+  // Second click — execute
+  const ax=toolAnchor.gx, az=toolAnchor.gz;
+  toolAnchor=null;
+
+  if(buildTool==='line'){
+    const cells=lineCells(ax,az,gx,gz);
+    erasing?execToolErase(cells,currentLayer):execToolPlace(cells,currentLayer);
+  }else if(buildTool==='rect'){
+    const cells=rectCells(ax,az,gx,gz);
+    erasing?execToolErase(cells,currentLayer):execToolPlace(cells,currentLayer);
+  }else if(buildTool==='wall'){
+    const cells=lineCells(ax,az,gx,gz);
+    erasing?execWallErase(cells,currentLayer):execWallPlace(cells,currentLayer);
+  }else if(buildTool==='room'){
+    erasing?execRoomErase(ax,az,gx,gz,currentLayer):execRoomPlace(ax,az,gx,gz,currentLayer);
+  }
+
+  document.getElementById('toolInfo').textContent=TOOL_DESCS[buildTool];
+  return true;
+}
+
+// Get preview cells for 2D rendering
+function getToolPreview(gx,gz){
+  if(!toolAnchor) return null;
+  const ax=toolAnchor.gx, az=toolAnchor.gz;
+  if(buildTool==='line'||buildTool==='wall') return {cells:lineCells(ax,az,gx,gz),type:buildTool};
+  if(buildTool==='rect') return {cells:rectCells(ax,az,gx,gz),type:'rect'};
+  if(buildTool==='room') return {cells:roomCells(ax,az,gx,gz),type:'room'};
+  return null;
+}
+
 // ===== THREE.JS =====
 const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x0a0a0f,.006);scene.background=new THREE.Color(0x0a0a0f);
 const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,500);
@@ -653,506 +942,117 @@ function createBlock(gx,gy,gz){
   if(!entry)return;
   rebuildNbrs(gx,gy,gz);
   const b=BLOCKS[entry.type];
-  if(b.isFire){entry.onFire=true;fires.add(K(gx,gy,gz));for(const[dx,dy,dz]of D6){const nk=K(gx+dx,gy+dy,gz+dz),nb=placed.get(nk);if(nb&&!nb.onFire&&BLOCKS[nb.type].flamm>=1)ignite(nk,nb);}}
-  if(b.igniter){for(const[dx,dy,dz]of D6){const nk=K(gx+dx,gy+dy,gz+dz),nb=placed.get(nk);if(nb&&!nb.onFire&&BLOCKS[nb.type].flamm>=1)ignite(nk,nb);}}
-  if(b.extinguish){for(const[dx,dy,dz]of D6){const nk=K(gx+dx,gy+dy,gz+dz),nb=placed.get(nk);if(nb&&nb.onFire)extinguish(nk,nb);}}
+  const nearby=getNearby(gx,gy,gz,1.5);
+  if(b.isFire){
+    entry.onFire=true;fires.add(K(gx,gy,gz));
+    for(const[nk,nb]of nearby){if(!nb.onFire&&BLOCKS[nb.type].flamm>=1)ignite(nk,nb);}
+  }
+  if(b.igniter){
+    for(const[nk,nb]of nearby){if(!nb.onFire&&BLOCKS[nb.type].flamm>=1)ignite(nk,nb);}
+  }
+  if(b.extinguish){
+    for(const[nk,nb]of nearby){if(nb.onFire)extinguish(nk,nb);}
+  }
 }
 
 function removeBlock(gx,gy,gz){const key=K(gx,gy,gz),e=placed.get(key);if(!e)return;scene.remove(e.mesh);e.mesh.geometry.dispose();e.mesh.material.dispose();placed.delete(key);fires.delete(key);rebuildNbrs(gx,gy,gz);schedCol(gx,gy+1,gz);updateStats();}
-function ignite(key,entry){if(entry.onFire)return;const b=BLOCKS[entry.type];if(b.extinguish||b.flamm===0)return;const[gx,gy,gz]=PK(key);for(const[dx,dy,dz]of D6){const nb=placed.get(K(gx+dx,gy+dy,gz+dz));if(nb&&BLOCKS[nb.type].extinguish)return;}entry.onFire=true;entry.fireTick=0;fires.add(key);}
+
+// Proximity-based neighbor finder (handles fractional coordinates)
+function getNearby(gx,gy,gz,range){
+  const result=[];
+  for(const[nk,ne]of placed){
+    if(Math.abs(ne.gx-gx)<=range&&Math.abs(ne.gy-gy)<=range&&Math.abs(ne.gz-gz)<=range){
+      result.push([nk,ne]);
+    }
+  }
+  return result;
+}
+
+function ignite(key,entry){
+  if(entry.onFire)return;
+  const b=BLOCKS[entry.type];
+  if(b.extinguish||b.flamm===0)return;
+  // Check if adjacent to water (extinguisher) — proximity check
+  const nearby=getNearby(entry.gx,entry.gy,entry.gz,1.5);
+  for(const[,ne]of nearby){
+    if(BLOCKS[ne.type].extinguish)return;
+  }
+  entry.onFire=true;entry.fireTick=0;fires.add(key);
+}
 function extinguish(key,entry){entry.onFire=false;entry.fireTick=0;fires.delete(key);}
 function destroyBlk(key,entry){for(let i=0;i<25;i++)spawnP(entry.gx,entry.gy,entry.gz,'ember');for(let i=0;i<8;i++)spawnP(entry.gx,entry.gy+.5,entry.gz,'smoke');const{gx,gy,gz}=entry;scene.remove(entry.mesh);entry.mesh.geometry.dispose();entry.mesh.material.dispose();placed.delete(key);fires.delete(key);rebuildNbrs(gx,gy,gz);schedCol(gx,gy+1,gz);updateStats();}
 
 // ===== COLLAPSE =====
 const colQ=new Set();
 function schedCol(gx,gy,gz){const k=K(gx,gy,gz);if(placed.has(k))colQ.add(k);}
+function hasSup(gx,gy,gz){
+  if(gy<=0)return true;
+  // Check direct below and nearby below (handles fractional Y)
+  for(const[,e]of placed){
+    if(Math.abs(e.gx-gx)<=0.5&&Math.abs(e.gz-gz)<=0.5&&e.gy<gy&&e.gy>=gy-1.5) return true;
+  }
+  // Cantilever: horizontal neighbor with support below
+  for(const[dx,,dz]of[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]]){
+    const nk=K(gx+dx,gy,gz+dz);
+    if(placed.has(nk)){
+      const ne=placed.get(nk);
+      for(const[,e2]of placed){
+        if(Math.abs(e2.gx-ne.gx)<=0.5&&Math.abs(e2.gz-ne.gz)<=0.5&&e2.gy<ne.gy&&e2.gy>=ne.gy-1.5) return true;
+      }
+    }
+  }
+  return false;
+}
 function procCol(){if(!colQ.size)return;const batch=[...colQ];colQ.clear();const toF=[];for(const key of batch){const e=placed.get(key);if(e&&!hasSup(e.gx,e.gy,e.gz))toF.push(key);}for(const key of toF){const e=placed.get(key);if(!e)continue;const{gx,gy,gz}=e;fires.delete(key);placed.delete(key);falling.push({mesh:e.mesh,vy:0,vx:(Math.random()-.5)*2,vz:(Math.random()-.5)*2,vr:(Math.random()-.5)*4,life:3});for(let i=0;i<8;i++)spawnP(gx,gy,gz,'ember');rebuildNbrs(gx,gy,gz);schedCol(gx,gy+1,gz);for(const[dx,,dz]of[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]]){schedCol(gx+dx,gy,gz+dz);schedCol(gx+dx,gy+1,gz+dz);}}if(toF.length){updateStats();procCol();}}
-function hasSup(gx,gy,gz){if(gy<=0)return true;if(placed.has(K(gx,gy-1,gz)))return true;for(const[dx,,dz]of[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]])if(placed.has(K(gx+dx,gy,gz+dz))&&placed.has(K(gx+dx,gy-1,gz+dz)))return true;return false;}
 
 // ===== FIRE =====
 let fTmr=0;const FT=.4;
-function tickFire(){const ign=[],des=[];for(const key of fires){const e=placed.get(key);if(!e){fires.delete(key);continue;}const b=BLOCKS[e.type],[gx,gy,gz]=PK(key);e.fireTick+=FT;if(b.isFire){for(const[dx,dy,dz]of D6){const nk=K(gx+dx,gy+dy,gz+dz),nb=placed.get(nk);if(nb){if(BLOCKS[nb.type].extinguish){des.push(key);break;}if(!nb.onFire&&BLOCKS[nb.type].flamm>=1&&Math.random()<.3)ign.push([nk,nb]);}}}else if(b.flamm===2){e.hp-=14;e.integrity=Math.max(0,e.hp/e.maxHP);if(e.hp<=0)des.push(key);else for(const[dx,dy,dz]of D6){const nk=K(gx+dx,gy+dy,gz+dz),nb=placed.get(nk);if(nb&&!nb.onFire&&BLOCKS[nb.type].flamm>=1&&Math.random()<.15)ign.push([nk,nb]);}}else if(b.flamm===1){e.hp-=4;e.integrity=Math.max(0,e.hp/e.maxHP);if(e.hp<=0)des.push(key);}}for(const[nk,nb]of ign)ignite(nk,nb);for(const k of des){const e=placed.get(k);if(e)destroyBlk(k,e);}}
+function tickFire(){
+  const ign=[],des=[];
+  for(const key of fires){
+    const e=placed.get(key);
+    if(!e){fires.delete(key);continue;}
+    const b=BLOCKS[e.type];
+    const{gx,gy,gz}=e;
+    e.fireTick+=FT;
+    // Find all blocks nearby (within 1.5 units — catches fractional positions)
+    const nearby=getNearby(gx,gy,gz,1.5);
+    if(b.isFire){
+      // FIRE block: spreads aggressively, killed by water
+      for(const[nk,nb]of nearby){
+        if(nk===key)continue;
+        if(BLOCKS[nb.type].extinguish){des.push(key);break;}
+        if(!nb.onFire&&BLOCKS[nb.type].flamm>=1&&Math.random()<.3) ign.push([nk,nb]);
+      }
+    }else if(b.flamm===2){
+      // Burnable: takes heavy damage, spreads moderately
+      e.hp-=14;e.integrity=Math.max(0,e.hp/e.maxHP);
+      if(e.hp<=0) des.push(key);
+      else for(const[nk,nb]of nearby){
+        if(nk===key)continue;
+        if(!nb.onFire&&BLOCKS[nb.type].flamm>=1&&Math.random()<.15) ign.push([nk,nb]);
+      }
+    }else if(b.flamm===1){
+      // Weakened: takes light damage, doesn't spread
+      e.hp-=4;e.integrity=Math.max(0,e.hp/e.maxHP);
+      if(e.hp<=0) des.push(key);
+    }
+  }
+  for(const[nk,nb]of ign) ignite(nk,nb);
+  for(const k of des){const e=placed.get(k);if(e)destroyBlk(k,e);}
+}
 function updFireVis(dt){const t=performance.now()*.001;let fcx=0,fcy=0,fcz=0,fc=0;for(const[,entry]of placed){const b=BLOCKS[entry.type];if(entry.onFire){const rate=b.isFire?10:(b.flamm===2?6:3);for(let i=0;i<Math.ceil(rate*dt*12);i++)spawnP(entry.gx,entry.gy,entry.gz,'fire');if(b.flamm===2&&entry.integrity<.5)for(let i=0;i<Math.ceil(3*dt*8);i++)spawnP(entry.gx,entry.gy+.5,entry.gz,'smoke');fcx+=entry.gx;fcy+=entry.gy;fcz+=entry.gz;fc++;if(viewMode==='standard'){if(b.isFire){entry.mesh.material.emissiveIntensity=1+Math.sin(t*10)*.3;entry.mesh.material.opacity=.3+Math.sin(t*7)*.15;const s=.8+Math.sin(t*5)*.1;entry.mesh.scale.set(s,.7+Math.sin(t*6)*.25,s);}else{const dmg=1-entry.integrity;const r=((entry.origColor>>16)&0xff)/255,g=((entry.origColor>>8)&0xff)/255,bl=(entry.origColor&0xff)/255;entry.mesh.material.color.setRGB(r*(1-dmg*.7)+dmg*.12,g*(1-dmg*.85),bl*(1-dmg*.9));entry.mesh.material.emissive.setRGB(.6+Math.sin(t*8+entry.gx)*.2,.15+Math.sin(t*6+entry.gz)*.1,0);entry.mesh.material.emissiveIntensity=.35+dmg*.45;entry.mesh.scale.setScalar(.65+.35*entry.integrity);}}}else if(viewMode==='standard'){if(entry.integrity<1){const dmg=1-entry.integrity;const r=((entry.origColor>>16)&0xff)/255,g=((entry.origColor>>8)&0xff)/255,bl=(entry.origColor&0xff)/255;entry.mesh.material.color.setRGB(r*(1-dmg*.5)+dmg*.06,g*(1-dmg*.6),bl*(1-dmg*.5));}else if(b.emissiveI&&b.emissiveI>.3&&!b.isFire){entry.mesh.material.emissiveIntensity=b.emissiveI*(.8+.2*Math.sin(t*3+entry.gx));}}}if(fc>0){fireL.position.set(fcx/fc,fcy/fc+2,fcz/fc);fireL.intensity=Math.min(fc*.6,10)*(.8+Math.sin(t*12)*.2);}else fireL.intensity*=.9;}
 function updFall(dt){for(let i=falling.length-1;i>=0;i--){const fb=falling[i];fb.vy-=14*dt;fb.mesh.position.y+=fb.vy*dt;fb.mesh.position.x+=fb.vx*dt;fb.mesh.position.z+=fb.vz*dt;fb.mesh.rotation.x+=fb.vr*dt;fb.mesh.rotation.z+=fb.vr*.7*dt;fb.life-=dt;if(fb.life<.6){fb.mesh.material.transparent=true;fb.mesh.material.opacity=fb.life/.6;}if(fb.life<=0||fb.mesh.position.y<-15){scene.remove(fb.mesh);fb.mesh.geometry.dispose();fb.mesh.material.dispose();falling.splice(i,1);}}}
 
 // ===== PRESETS (Map dedup: last write wins) =====
 function dedup(arr){const m=new Map();for(const b of arr)m.set(K(b[0],b[1],b[2]),b);return[...m.values()];}
 
-// Helper: fill rect of walls (perimeter only) at height y
-function wallRect(o,x1,z1,x2,z2,y,t){
-  for(let x=x1;x<=x2;x++){o.push([x,y,z1,t]);o.push([x,y,z2,t]);}
-  for(let z=z1+1;z<z2;z++){o.push([x1,y,z,t]);o.push([x2,y,z,t]);}
-}
-// Helper: fill solid floor
-function floorRect(o,x1,z1,x2,z2,y,t){
-  for(let x=x1;x<=x2;x++)for(let z=z1;z<=z2;z++)o.push([x,y,z,t]);
-}
-// Helper: wall line along X
-function wallX(o,x1,x2,y,z,t){for(let x=x1;x<=x2;x++)o.push([x,y,z,t]);}
-// Helper: wall line along Z
-function wallZ(o,z1,z2,y,x,t){for(let z=z1;z<=z2;z++)o.push([x,y,z,t]);}
 
-function genApartment(ox,oz){
-  const o=[];
-  // 10 wide x 8 deep, 5 floors, 3 blocks per floor (floor + 2 wall)
-  const W=10, D=8, FL=5;
-  // Structural metal columns at corners + midpoints (run full height)
-  const colPos=[[0,0],[0,D-1],[W-1,0],[W-1,D-1],[0,4],[W-1,4],[5,0],[5,D-1]];
-  for(const[cx,cz]of colPos) for(let y=0;y<FL*3+1;y++) o.push([ox+cx,y,oz+cz,Ty.METAL]);
-
-  for(let f=0;f<FL;f++){
-    const by=f*3;
-    // Floor slab (stone ground floor, wood upper)
-    floorRect(o, ox,oz, ox+W-1,oz+D-1, by, f===0?Ty.STONE:Ty.WOOD);
-    // Exterior walls (brick, 2 high)
-    for(let h=1;h<=2;h++){
-      wallRect(o, ox,oz, ox+W-1,oz+D-1, by+h, Ty.BRICK);
-    }
-    // --- WINDOWS: pairs on front/back at h=2, singles on sides ---
-    // Front (z=oz) windows
-    for(let x=1;x<W-1;x++){
-      if(x===4||x===5) continue; // entrance bay or stairwell
-      if(x%2===0) o.push([ox+x,by+2,oz,Ty.GLASS]);
-    }
-    // Back (z=oz+D-1) windows
-    for(let x=1;x<W-1;x++){
-      if(x===4||x===5) continue;
-      if(x%2===1) o.push([ox+x,by+2,oz+D-1,Ty.GLASS]);
-    }
-    // Side windows
-    for(let z=1;z<D-1;z++){
-      if(z%2===1){o.push([ox,by+2,oz+z,Ty.GLASS]);o.push([ox+W-1,by+2,oz+z,Ty.GLASS]);}
-    }
-
-    // --- STAIRWELL (x=4..5, z=oz+D-3..oz+D-1) enclosed in brick ---
-    // Stairwell walls (interior side only, exterior already done)
-    for(let h=1;h<=2;h++){
-      wallZ(o, oz+D-3, oz+D-2, by+h, ox+3, Ty.BRICK); // west stairwell wall
-      wallX(o, ox+4, ox+5, by+h, oz+D-3, Ty.BRICK);    // south stairwell wall
-    }
-    // Stairwell door
-    o.push([ox+4,by+1,oz+D-3,Ty.WOOD]); // door opening
-    // Stairs (wood steps)
-    if(f<FL-1){
-      o.push([ox+4,by+1,oz+D-2,Ty.WOOD]);
-      o.push([ox+5,by+2,oz+D-2,Ty.WOOD]);
-      o.push([ox+4,by+1,oz+D-1,Ty.WOOD]); // landing (override back wall)
-    }
-
-    // --- CENTRAL HALLWAY (z=oz+4, running east-west) ---
-    for(let h=1;h<=2;h++){
-      wallX(o, ox+1, ox+W-2, by+h, oz+4, Ty.WOOD);
-    }
-    // Hallway doors into apartments (gaps)
-    for(const dx of [2,6,8]){
-      o.push([ox+dx,by+1,oz+4,Ty.WOOD]); // door (override wall)
-    }
-
-    // --- APARTMENT DIVIDER WALLS (split into 3 units per side) ---
-    // Unit dividers at x=3 and x=7
-    for(const dx of [3,7]){
-      for(let h=1;h<=2;h++){
-        wallZ(o, oz+1, oz+3, by+h, ox+dx, Ty.WOOD); // south side units
-        wallZ(o, oz+5, oz+D-2, by+h, ox+dx, Ty.BRICK); // north side units
-      }
-    }
-    // Kitchen/bathroom partition inside each unit (short wood wall)
-    for(const dx of [1,5]){
-      o.push([ox+dx,by+1,oz+2,Ty.WOOD]);
-      o.push([ox+dx,by+1,oz+6,Ty.WOOD]);
-    }
-
-    // --- FRONT ENTRANCE (ground floor only) ---
-    if(f===0){
-      // Double door at center front
-      o.push([ox+4,by+1,oz,Ty.GLASS]); o.push([ox+5,by+1,oz,Ty.GLASS]); // glass doors
-      o.push([ox+4,by+2,oz,Ty.GLASS]); o.push([ox+5,by+2,oz,Ty.GLASS]); // transom
-      // Lobby: open area, no hallway wall near entrance
-      // Remove hallway wall in lobby area (override with nothing — push glass decorative)
-      o.push([ox+4,by+1,oz+4,Ty.GLASS]); o.push([ox+5,by+1,oz+4,Ty.GLASS]);
-      // Lobby light
-      o.push([ox+4,by+2,oz+2,Ty.GLOW]); o.push([ox+5,by+2,oz+2,Ty.GLOW]);
-    }
-
-    // --- BALCONIES (floors 2+, front face, stone slab cantilevers) ---
-    if(f>=1){
-      for(const dx of [1,2,6,7,8]){
-        o.push([ox+dx,by,oz-1,Ty.STONE]); // balcony slab
-      }
-      // Balcony railing (metal)
-      for(const dx of [1,2,6,7,8]){
-        o.push([ox+dx,by+1,oz-1,Ty.METAL]);
-      }
-    }
-
-    // --- HALLWAY LIGHTS ---
-    o.push([ox+3,by+2,oz+4,Ty.GLOW]);
-    o.push([ox+7,by+2,oz+4,Ty.GLOW]);
-  }
-
-  // --- ROOF ---
-  const ry=FL*3;
-  floorRect(o, ox,oz, ox+W-1,oz+D-1, ry, Ty.STONE);
-  // Parapet (stone rim)
-  wallRect(o, ox,oz, ox+W-1,oz+D-1, ry+1, Ty.STONE);
-  // HVAC units on roof
-  o.push([ox+2,ry+1,oz+2,Ty.METAL]);o.push([ox+2,ry+2,oz+2,Ty.METAL]);
-  o.push([ox+7,ry+1,oz+2,Ty.METAL]);o.push([ox+7,ry+2,oz+2,Ty.METAL]);
-  // Stairwell penthouse (access to roof)
-  for(let h=1;h<=2;h++){
-    wallX(o, ox+4,ox+5, ry+h, oz+D-3, Ty.BRICK);
-    wallX(o, ox+4,ox+5, ry+h, oz+D-1, Ty.BRICK);
-    o.push([ox+3,ry+h,oz+D-2,Ty.BRICK]);
-    o.push([ox+3,ry+h,oz+D-1,Ty.BRICK]);
-  }
-  floorRect(o, ox+3,oz+D-3, ox+5,oz+D-1, ry+3, Ty.STONE);
-  return o;
-}
-
-function genSchool(ox,oz){
-  const o=[];
-  // 16 wide x 10 deep, 2 floors
-  const W=16, D=10, FL=2;
-
-  // Structural columns (metal)
-  for(const[cx,cz]of[[0,0],[0,D-1],[W-1,0],[W-1,D-1],[8,0],[8,D-1],[0,5],[W-1,5],[8,5]])
-    for(let y=0;y<FL*3+1;y++) o.push([ox+cx,y,oz+cz,Ty.METAL]);
-
-  for(let f=0;f<FL;f++){
-    const by=f*3;
-    // Floor slab
-    floorRect(o, ox,oz, ox+W-1,oz+D-1, by, f===0?Ty.STONE:Ty.WOOD);
-    // Exterior walls
-    for(let h=1;h<=2;h++) wallRect(o, ox,oz, ox+W-1,oz+D-1, by+h, Ty.BRICK);
-
-    // --- FRONT FACADE: large glass window bands ---
-    for(let x=1;x<W-1;x++){
-      if(x===7||x===8) continue; // main entrance
-      o.push([ox+x,by+1,oz,Ty.GLASS]);
-      o.push([ox+x,by+2,oz,Ty.GLASS]);
-    }
-    // Side windows (high strip)
-    for(let z=1;z<D-1;z++){
-      if(z%2===0){o.push([ox,by+2,oz+z,Ty.GLASS]);o.push([ox+W-1,by+2,oz+z,Ty.GLASS]);}
-    }
-    // Back windows
-    for(let x=1;x<W-1;x++){
-      if(x%2===0) o.push([ox+x,by+2,oz+D-1,Ty.GLASS]);
-    }
-
-    // --- MAIN ENTRANCE (double glass doors + vestibule) ---
-    if(f===0){
-      o.push([ox+7,by+1,oz,Ty.GLASS]); o.push([ox+8,by+1,oz,Ty.GLASS]); // doors
-      o.push([ox+7,by+2,oz,Ty.GLASS]); o.push([ox+8,by+2,oz,Ty.GLASS]); // above
-      // Vestibule walls
-      for(let h=1;h<=2;h++){o.push([ox+6,by+h,oz+1,Ty.GLASS]);o.push([ox+9,by+h,oz+1,Ty.GLASS]);}
-    }
-
-    // --- CENTRAL HALLWAY running east-west at z=oz+5 ---
-    for(let h=1;h<=2;h++){
-      // North hallway wall
-      wallX(o, ox+1, ox+W-2, by+h, oz+5, Ty.BRICK);
-      // South hallway wall (only on classroom side, not near entrance)
-      wallX(o, ox+1, ox+5, by+h, oz+3, Ty.BRICK);
-      wallX(o, ox+10, ox+W-2, by+h, oz+3, Ty.BRICK);
-    }
-    // Hallway doors
-    for(const dx of [3,6,11,14]){
-      o.push([ox+dx,by+1,oz+5,Ty.WOOD]); // into north classrooms
-      if(dx<=5||dx>=10) o.push([ox+dx,by+1,oz+3,Ty.WOOD]); // into south classrooms
-    }
-    // Hallway lights
-    for(let x=2;x<W-1;x+=3) o.push([ox+x,by+2,oz+4,Ty.GLOW]);
-
-    // --- CLASSROOMS (divided by wood partition walls) ---
-    // North side classrooms: between hallway and back wall
-    for(const dx of [4,8,12]){
-      for(let h=1;h<=2;h++) wallZ(o, oz+6, oz+D-2, by+h, ox+dx, Ty.WOOD);
-      o.push([ox+dx,by+1,oz+7,Ty.WOOD]); // door gap -> already wood, acts as door
-    }
-
-    // South side rooms (classrooms + offices)
-    // Left block: rooms at x=0..5
-    for(let h=1;h<=2;h++) wallZ(o, oz+1, oz+2, by+h, ox+5, Ty.WOOD);
-    // Right block: rooms at x=10..15
-    for(let h=1;h<=2;h++) wallZ(o, oz+1, oz+2, by+h, ox+10, Ty.WOOD);
-    for(let h=1;h<=2;h++) wallZ(o, oz+1, oz+2, by+h, ox+13, Ty.WOOD);
-
-    // --- LARGE ROOM: gym/cafeteria on south side center (x=6..9, z=1..3) ---
-    // This area is open (between entrance vestibule and hallway walls)
-    // Admin office: south-west corner (x=1..4, z=1..2)
-    for(let h=1;h<=2;h++){
-      wallX(o, ox+1, ox+4, by+h, oz+2, Ty.WOOD);
-      o.push([ox+4,by+h,oz+1,Ty.WOOD]);
-    }
-    o.push([ox+3,by+1,oz+2,Ty.WOOD]); // office door
-
-    // Classroom furniture (wood desks — sparse representation)
-    if(f===0){
-      // Desks in north classrooms
-      for(const[dx,dz]of[[2,7],[2,8],[6,7],[6,8],[10,7],[10,8],[14,7],[14,8]]){
-        o.push([ox+dx,by+1,oz+dz,Ty.WOOD]);
-      }
-    }
-
-    // --- STAIRWELL (east end, x=14..15, z=6..9) ---
-    for(let h=1;h<=2;h++){
-      o.push([ox+13,by+h,oz+6,Ty.BRICK]);
-      o.push([ox+13,by+h,oz+7,Ty.BRICK]);
-    }
-    if(f<FL-1){
-      o.push([ox+14,by+1,oz+7,Ty.WOOD]);
-      o.push([ox+15,by+2,oz+8,Ty.WOOD]);
-    }
-    // Restrooms (x=0..2, z=6..9) — brick partitions
-    for(let h=1;h<=2;h++){
-      o.push([ox+2,by+h,oz+6,Ty.BRICK]);
-      o.push([ox+2,by+h,oz+7,Ty.BRICK]);
-      o.push([ox+2,by+h,oz+8,Ty.BRICK]);
-      o.push([ox+1,by+h,oz+7,Ty.BRICK]); // stall divider
-    }
-    o.push([ox+2,by+1,oz+6,Ty.WOOD]); // restroom door
-  }
-
-  // --- ROOF (flat metal) ---
-  const ry=FL*3;
-  floorRect(o, ox,oz, ox+W-1,oz+D-1, ry, Ty.METAL);
-  // Roof parapet
-  wallRect(o, ox,oz, ox+W-1,oz+D-1, ry+1, Ty.STONE);
-  // Rooftop HVAC
-  o.push([ox+4,ry+1,oz+5,Ty.METAL]);o.push([ox+4,ry+2,oz+5,Ty.METAL]);
-  o.push([ox+12,ry+1,oz+5,Ty.METAL]);o.push([ox+12,ry+2,oz+5,Ty.METAL]);
-  // Flagpole
-  for(let y=ry+1;y<=ry+4;y++) o.push([ox,y,oz,Ty.METAL]);
-  // Skylight over gym area
-  for(let x=6;x<=9;x++) o.push([ox+x,ry,oz+2,Ty.GLASS]);
-  return o;
-}
-
-function genGasStation(ox,oz){
-  const o=[];
-  // Overall lot: 14 wide x 11 deep
-  const LW=14, LD=11;
-  // Concrete pad
-  floorRect(o, ox,oz, ox+LW-1,oz+LD-1, 0, Ty.STONE);
-
-  // === CONVENIENCE STORE (right side: x=8..13, z=3..9) ===
-  const sx=ox+8, sz=oz+3, sw=6, sd=7;
-  // Walls (brick, 3 high for taller single story)
-  for(let h=1;h<=3;h++) wallRect(o, sx,sz, sx+sw-1,sz+sd-1, h, Ty.BRICK);
-
-  // Front windows (z=sz, full glass wall — override brick)
-  for(let x=1;x<sw-1;x++){
-    o.push([sx+x,1,sz,Ty.GLASS]);
-    o.push([sx+x,2,sz,Ty.GLASS]);
-    o.push([sx+x,3,sz,Ty.GLASS]); // full height glass
-  }
-  // Glass door (center front)
-  o.push([sx+2,1,sz,Ty.WOOD]);o.push([sx+3,1,sz,Ty.WOOD]);
-  // Side windows
-  for(let z=sz+2;z<=sz+sd-3;z+=2){
-    o.push([sx,2,z,Ty.GLASS]);
-    o.push([sx+sw-1,2,z,Ty.GLASS]);
-  }
-  // Roof (wood joists + stone slab)
-  floorRect(o, sx,sz, sx+sw-1,sz+sd-1, 4, Ty.WOOD);
-  // Flat roof cap
-  floorRect(o, sx,sz, sx+sw-1,sz+sd-1, 5, Ty.STONE);
-
-  // Interior: checkout counter (near door)
-  wallX(o, sx+1,sx+2, 1, sz+1, Ty.WOOD);
-  o.push([sx+1,2,sz+1,Ty.GLOW]); // register light
-
-  // Aisle shelving (wood)
-  for(let z=sz+3;z<=sz+5;z++){
-    o.push([sx+1,1,z,Ty.WOOD]); o.push([sx+1,2,z,Ty.WOOD]);
-    o.push([sx+3,1,z,Ty.WOOD]); o.push([sx+3,2,z,Ty.WOOD]);
-  }
-  // Cooler wall (back, glass front)
-  for(let x=sx+1;x<=sx+4;x++){
-    o.push([x,1,sz+sd-2,Ty.METAL]); // cooler back
-    o.push([x,2,sz+sd-2,Ty.GLASS]); // glass doors
-  }
-  // Interior lights
-  for(let x=sx+1;x<sx+sw-1;x+=2) o.push([sx+x>sx+sw-1?sx+sw-2:x,4,sz+3,Ty.GLOW]);
-  o.push([sx+2,4,sz+3,Ty.GLOW]);o.push([sx+4,4,sz+5,Ty.GLOW]);
-
-  // Back storage room (brick partition inside)
-  for(let h=1;h<=3;h++){
-    wallX(o, sx+1,sx+sw-2, h, sz+sd-3, Ty.BRICK);
-  }
-  o.push([sx+2,1,sz+sd-3,Ty.WOOD]); // storage door
-
-  // === CANOPY (left side: x=ox..ox+6, z=oz+2..oz+9) ===
-  // 6 metal pillars
-  const pils=[[ox+1,oz+2],[ox+1,oz+9],[ox+5,oz+2],[ox+5,oz+9],[ox+1,oz+5],[ox+5,oz+5]];
-  for(const[px,pz]of pils) for(let y=1;y<=5;y++) o.push([px,y,pz,Ty.METAL]);
-  // Canopy roof (metal, large)
-  floorRect(o, ox,oz+1, ox+6,oz+10, 6, Ty.METAL);
-  // Canopy edge trim
-  wallRect(o, ox,oz+1, ox+6,oz+10, 6, Ty.STONE);
-  // Underside lighting
-  for(let x=ox+2;x<=ox+4;x++){
-    o.push([x,5,oz+3,Ty.GLOW]);
-    o.push([x,5,oz+5,Ty.GLOW]);
-    o.push([x,5,oz+7,Ty.GLOW]);
-    o.push([x,5,oz+9,Ty.GLOW]);
-  }
-
-  // === FUEL PUMP ISLANDS (concrete raised pads + pumps) ===
-  // Island 1: z=oz+3..oz+4
-  for(let x=ox+2;x<=ox+4;x++){
-    o.push([x,1,oz+3,Ty.STONE]); // raised pad
-    o.push([x,1,oz+4,Ty.STONE]);
-  }
-  o.push([ox+2,2,oz+3,Ty.METAL]);o.push([ox+2,3,oz+3,Ty.GLOW]); // pump 1
-  o.push([ox+4,2,oz+3,Ty.METAL]);o.push([ox+4,3,oz+3,Ty.GLOW]); // pump 2
-  o.push([ox+2,2,oz+4,Ty.METAL]);o.push([ox+2,3,oz+4,Ty.GLOW]); // pump 3
-  o.push([ox+4,2,oz+4,Ty.METAL]);o.push([ox+4,3,oz+4,Ty.GLOW]); // pump 4
-
-  // Island 2: z=oz+7..oz+8
-  for(let x=ox+2;x<=ox+4;x++){
-    o.push([x,1,oz+7,Ty.STONE]);
-    o.push([x,1,oz+8,Ty.STONE]);
-  }
-  o.push([ox+2,2,oz+7,Ty.METAL]);o.push([ox+2,3,oz+7,Ty.GLOW]);
-  o.push([ox+4,2,oz+7,Ty.METAL]);o.push([ox+4,3,oz+7,Ty.GLOW]);
-  o.push([ox+2,2,oz+8,Ty.METAL]);o.push([ox+2,3,oz+8,Ty.GLOW]);
-  o.push([ox+4,2,oz+8,Ty.METAL]);o.push([ox+4,3,oz+8,Ty.GLOW]);
-
-  // === UNDERGROUND FUEL TANKS ===
-  o.push([ox+3,0,oz+3,Ty.LAVA]);o.push([ox+3,0,oz+4,Ty.LAVA]);
-  o.push([ox+3,0,oz+7,Ty.LAVA]);o.push([ox+3,0,oz+8,Ty.LAVA]);
-
-  // === SIGNAGE POLE (tall metal tower) ===
-  for(let y=1;y<=8;y++) o.push([ox,y,oz,Ty.METAL]);
-  o.push([ox,8,oz+1,Ty.METAL]); // sign arm
-  o.push([ox+1,8,oz,Ty.METAL]);
-  o.push([ox,9,oz,Ty.GLOW]); // illuminated sign top
-
-  // === DUMPSTER ENCLOSURE (back-right corner) ===
-  // Brick walls enclosing trash area
-  for(let h=1;h<=2;h++){
-    wallX(o, sx+sw, sx+sw+1, h, sz+sd-1, Ty.BRICK);
-    wallZ(o, sz+sd-2, sz+sd-1, h, sx+sw+1, Ty.BRICK);
-  }
-  o.push([sx+sw,1,sz+sd-2,Ty.METAL]); // dumpster body
-  o.push([sx+sw+1,1,sz+sd-2,Ty.METAL]);
-
-  // === ICE MACHINE (outside store front) ===
-  o.push([sx-1,1,sz,Ty.METAL]);
-  o.push([sx-1,2,sz,Ty.METAL]);
-
-  // === AIR/WATER STATION (far left) ===
-  o.push([ox,1,oz+LD-1,Ty.METAL]);
-  o.push([ox,2,oz+LD-1,Ty.GLOW]);
-
-  return o;
-}
-
-function spawnPreset(type){
-  let raw;
-  if(type==='apartment')raw=genApartment(-5,-4);
-  else if(type==='school')raw=genSchool(-8,-5);
-  else if(type==='gasstation')raw=genGasStation(-7,-5);
-  else if(type==='stairdemo'){spawnStairDemo();return;}
-  else if(type==='house'){spawnHouse();return;}
-  if(!raw)return;
-  const blocks=dedup(raw);
-  for(const b of blocks)addBlock(b[0],b[1],b[2],b[3],b[4]);
-  for(const[k]of placed)rebuildGeo(k);
-  updateStats();
-  panX=0;panY=0;
-  camFocus();
-  if(dimMode==='2d'){resize2d();draw2d();}
-}
-function spawnHouse(){
-  const W='wall',F='floor',D='door',S='stairwell',WN='window',E='entrance';
-  // 24 wide × 18 deep (6m × 4.5m) 2-story single family home
-  const floor1=[
-    //0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15    16    17    18    19    20    21    22    23
-    [W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W,    W   ], // row 0: north
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    W   ], // row 1
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    W   ], // row 2
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    D,    F,    F,    F,    F,    F,    W   ], // row 3
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    W   ], // row 4
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    D,    F,    F,    F,    F,    F,    F,    F,    W,    W,    W,    W,    D,    W,    W   ], // row 5
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    W   ], // row 6
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    W,    W,    W,    D,    W,    W,    W,    W,    F,    F,    F,    F,    F,    W   ], // row 7
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    W,    S,    S,    F,    F,    F,    F,    F,    W   ], // row 8
-    [W,    W,    W,    W,    D,    W,    W,    W,    W,    W,    F,    F,    F,    F,    F,    W,    S,    S,    F,    F,    F,    F,    F,    W   ], // row 9
-    [W,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 10
-    [W,    F,    F,    F,    F,    F,    F,    F,    D,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 11
-    [W,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    D,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 12
-    [W,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 13
-    [W,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 14
-    [W,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 15
-    [W,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 16
-    [W,    W,    W,    WN,   W,    W,    E,    W,    W,    W,    W,    WN,   W,    W,    WN,   W,    W,    WN,   W,    W,    W,    WN,   W,    W   ], // row 17: south (front)
-  ];
-  const floor2=[
-    [W,    W,    W,    WN,   W,    W,    WN,   W,    W,    W,    W,    WN,   W,    W,    WN,   W,    W,    W,    W,    W,    WN,   W,    W,    W   ], // row 0: north
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 1
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 2
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 3
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    D,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 4
-    [W,    W,    W,    W,    W,    D,    W,    W,    W,    W,    W,    W,    W,    W,    D,    W,    W,    W,    W,    W,    D,    W,    W,    W   ], // row 5
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 6
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 7
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    W,    S,    S,    F,    F,    F,    F,    F,    W   ], // row 8
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    W,    S,    S,    F,    F,    F,    F,    F,    W   ], // row 9
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    W,    W,    D,    W,    W,    W,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 10
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 11
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    D,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 12
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 13
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 14
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 15
-    [W,    F,    F,    F,    F,    F,    F,    F,    F,    W,    F,    F,    F,    F,    W,    F,    F,    F,    F,    F,    F,    F,    F,    W   ], // row 16
-    [W,    W,    W,    WN,   W,    W,    WN,   W,    W,    W,    W,    WN,   W,    W,    W,    W,    W,    WN,   W,    W,    W,    WN,   W,    W   ], // row 17: south
-  ];
-  const json={building:{
-    name:'2-Story Family Home',
-    grid:[floor1,floor2],
-    materials:{wall:'brick',floor:'wood',door:'wood',stair:'wood',ceiling:'wood',window:'glass'},
-    room_labels:{
-      // Ground floor
-      '4,4,0':'Living Room',
-      '13,2,0':'Kitchen',
-      '20,3,0':'Dining',
-      '4,13,0':'Foyer',
-      '12,13,0':'Family Room',
-      '20,11,0':'Garage',
-      '12,8,0':'Half Bath',
-      '16,8,0':'Stairs',
-      // Second floor
-      '4,2,1':'Bedroom 2',
-      '15,2,1':'Bedroom 3',
-      '4,11,1':'Master Bedroom',
-      '12,12,1':'Ensuite',
-      '20,11,1':'Bedroom 4',
-      '16,8,1':'Stairs',
-      '10,7,1':'Hall',
-    },
-    furniture_notes:{
-      '2,3,0':'Sofa and TV wall',
-      '6,3,0':'Coffee table',
-      '11,1,0':'Kitchen countertop and appliances',
-      '14,2,0':'Kitchen island',
-      '20,2,0':'Dining table',
-      '5,14,0':'Entry console',
-      '11,13,0':'Bookshelf',
-      '20,14,0':'Car',
-      '3,12,1':'King bed',
-      '6,14,1':'Dresser',
-      '11,12,1':'Toilet and shower',
-      '3,2,1':'Single bed',
-      '15,1,1':'Single bed east wall',
-      '20,13,1':'Single bed',
-    }
-  }};
+// ===== PRESETS (JSON-based, use the full parser) =====
+function buildPresetJSON(json){
   clearAll();
   let raw;
-  try{raw=parseFloorplanJSON(json);}catch(e){console.error('House error:',e);return;}
+  try{raw=parseFloorplanJSON(json);}catch(e){console.error('Preset error:',e);return;}
   const blocks=dedup(raw);
   const prev=selectedBlock;
   for(const[x,y,z,t]of blocks)addBlock(x,y,z,t);
@@ -1161,7 +1061,7 @@ function spawnHouse(){
   const bldg=json.building;
   if(bldg.room_labels){
     const grids=extractFloorGrids(bldg);const g0=grids[0];
-    const{cols,numRows}=g0?gridDims(g0):{cols:24,numRows:18};
+    const{cols,numRows}=g0?gridDims(g0):{cols:20,numRows:16};
     const ox=-Math.floor(cols/2),oz=-Math.floor(numRows/2);
     const WALL_H=3;
     const labels=flattenFloorMap(bldg.room_labels);
@@ -1171,72 +1071,179 @@ function spawnHouse(){
   updateStats();panX=0;panY=0;camFocus();
   if(dimMode==='2d'){resize2d();draw2d();}
 }
-function spawnStairDemo(){
-  // Build a 3-floor building via JSON parser to exercise the stair post-pass
-  // 20 wide × 14 deep, 4 distinct stair configurations per floor
-  const W='wall', F='floor', S='stairwell', D='door', L='landing', WN='window';
-  const makeFloor=()=>[
-    // row 0: north wall
-    [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
-    // row 1
-    [W,F,F,F,W,F,F,F,F,W,F,F,F,F,W,S,F,F,F,W],
-    // row 2
-    [W,F,F,F,W,S,F,F,F,W,F,F,F,F,W,S,F,F,F,W],
-    // row 3
-    [W,F,F,F,W,S,F,F,F,W,S,S,F,F,W,S,F,F,F,W],
-    // row 4
-    [W,F,F,F,D,S,F,F,F,D,S,S,F,F,D,S,F,F,F,W],
-    // row 5
-    [W,F,F,F,W,S,F,F,F,W,S,S,F,F,W,S,F,F,F,W],
-    // row 6
-    [W,F,F,F,W,S,F,F,F,W,L,L,F,F,W,S,F,F,F,W],
-    // row 7
-    [W,W,W,D,W,S,F,F,F,W,S,S,F,F,W,S,F,F,F,W],
-    // row 8
-    [W,F,F,F,W,S,F,F,F,W,S,S,F,F,W,S,F,F,F,W],
-    // row 9
-    [W,F,F,F,W,F,F,F,F,W,S,S,F,F,W,F,F,F,F,W],
-    // row 10
-    [W,F,F,F,D,F,F,F,F,D,F,F,F,F,D,F,F,F,F,W],
-    // row 11
-    [W,F,F,F,W,F,F,F,F,W,F,F,F,F,W,F,F,F,F,W],
-    // row 12
-    [W,F,F,F,W,F,F,F,F,W,F,F,F,F,W,F,F,F,F,W],
-    // row 13: south wall
-    [W,W,W,W,W,W,WN,W,W,W,W,WN,W,W,W,W,WN,W,W,W]
-  ];
-  const json={building:{
-    name:'Stair Tower Demo',
-    grid:[makeFloor(),makeFloor(),makeFloor()],
-    materials:{wall:'brick',floor:'wood',stair:'wood',door:'wood',ceiling:'wood',window:'glass'},
+
+function spawnPreset(type){
+  if(type==='house') buildPresetJSON(makeHouseJSON());
+  else if(type==='office') buildPresetJSON(makeOfficeJSON());
+  else if(type==='firestation') buildPresetJSON(makeFireStationJSON());
+}
+
+// ---- PRESET 1: Suburban House (2-story, 22×16) ----
+function makeHouseJSON(){
+  const W='wall',F='floor',D='door',S='stairwell',WN='window',E='entrance';
+  return {building:{
+    name:'Suburban House',
+    grid:[
+      [ // Floor 1: Ground
+        [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, D, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, D, F, F, F, F, F, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W, W, D, W, W],
+        [W, F, F, F, F, F, F, F, F, W, W, W, D, W, W, W, W, W, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, W, S, S, W, F, F, F, W],
+        [W, W, W, W, D, W, W, W, W, W, F, F, F, F, W, S, S, W, F, F, F, W],
+        [W, F, F, F, F, F, F, W, F, F, F, F, F, F, W, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, D, F, F, F, F, F, F, D, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, W, F, F, F, F, F, F, W, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, W, F, F, F, F, F, F, W, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, W, F, F, F, F, F, F, W, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, W, F, F, F, F, F, F, W, F, F, W, F, F, F, W],
+        [W, W, WN,W, E, W, WN,W, W, WN,W, W, WN,W, W, WN,W, W, WN,W, W, W],
+      ],
+      [ // Floor 2: Upper
+        [W, W, WN,W, W, WN,W, W, W, W, W, WN,W, W, WN,W, W, W, W, WN,W, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, D, F, F, F, F, F, F, F, F, F, F, F, W],
+        [W, W, W, W, D, W, W, W, W, W, W, W, W, D, W, W, W, W, W, D, W, W],
+        [W, F, F, F, F, F, F, F, F, F, F, F, F, F, W, S, S, W, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, F, F, F, F, F, W, S, S, W, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, W, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, D, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, D, F, F, F, F, W, F, F, D, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, W, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, W, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, W, F, F, W, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, W, F, F, W, F, F, F, W],
+        [W, W, WN,W, W, WN,W, W, W, W, W, WN,W, W, W, W, W, W, WN,W, W, W],
+      ]
+    ],
+    materials:{wall:'brick',floor:'wood',door:'wood',stair:'wood',ceiling:'wood',window:'glass'},
     room_labels:{
-      '2,2,0':'Lobby','6,2,0':'Narrow run\n(1×8)','11,5,0':'Wide run\n(2×7)','16,4,0':'Long run\n(1×8)',
-      '2,10,0':'Lounge','6,10,0':'Open area','11,10,0':'Open area','16,10,0':'Open area',
-      '2,2,1':'Hall F2','6,2,1':'Narrow','11,5,1':'Wide','16,4,1':'Long',
-      '2,2,2':'Hall F3','6,2,2':'Narrow','11,5,2':'Wide','16,4,2':'Long'
+      '4,4,0':'Living Room','13,2,0':'Kitchen','19,3,0':'Pantry',
+      '3,12,0':'Garage','11,12,0':'Family Room','16,12,0':'Mudroom','19,10,0':'Laundry',
+      '12,7,0':'Half Bath','15,7,0':'Stairs',
+      '4,2,1':'Master Bed','12,2,1':'Bedroom 2','19,2,1':'Bedroom 3',
+      '4,10,1':'Master Bath','12,10,1':'Bath 2','15,7,1':'Stairs','19,10,1':'Office',
+      '8,6,1':'Hallway',
+    },
+    furniture_notes:{
+      '2,3,0':'Sofa and TV wall','6,4,0':'Coffee table',
+      '11,1,0':'Kitchen countertop and appliances','14,3,0':'Kitchen island',
+      '19,2,0':'Pantry shelf','11,12,0':'Bookshelf','3,13,0':'Car',
+      '3,2,1':'King bed','6,3,1':'Dresser','12,1,1':'Single bed',
+      '19,1,1':'Single bed east wall','3,12,1':'Toilet and shower',
+      '12,12,1':'Toilet and shower','19,12,1':'Desk',
     }
   }};
-  clearAll();
-  let raw;
-  try{raw=parseFloorplanJSON(json);}catch(e){console.error('StairDemo error:',e);return;}
-  const blocks=dedup(raw);
-  const prev=selectedBlock;
-  for(const b of blocks)addBlock(b[0],b[1],b[2],b[3],b[4]);
-  selectedBlock=prev;
-  for(const[k]of placed)rebuildGeo(k);
-  // Room labels
-  const bldg=json.building;
-  if(bldg.room_labels){
-    const grids=extractFloorGrids(bldg);const g0=grids[0];
-    const{cols,numRows}=g0?gridDims(g0):{cols:20,numRows:14};
-    const ox=-Math.floor(cols/2),oz=-Math.floor(numRows/2);
-    const WALL_H=3;
-    const labels=flattenFloorMap(bldg.room_labels);
-    for(const item of labels){const c=parseCoord(item.coord);const fi=c.f||item.floorIdx;
-      addRoomLabel(ox+c.x,fi*(WALL_H+1)+2.5,oz+c.z,item.label);}
-  }
-  updateStats();panX=0;panY=0;camFocus();
-  if(dimMode==='2d'){resize2d();draw2d();}
+}
+
+// ---- PRESET 2: Office Building (3-story, 26×14) ----
+function makeOfficeJSON(){
+  const W='wall',F='floor',D='door',S='stairwell',WN='window',E='entrance';
+  const makeOfficeFloor=(isGround)=>[
+    [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
+    [W, F, F, F, F, F, F, F, F, F, F, F, D, F, F, F, F, F, F, F, F, F, F, F, F, W],
+    [W, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W],
+    [W, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W],
+    [W, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W],
+    [W, W, W, W, W, D, W, W, W, D, W, W, W, W, W, D, W, W, W, W, D, W, W, S, S, W],
+    [W, F, F, F, F, F, F, F, F, F, F, F, D, F, F, F, F, F, F, F, F, W, F, S, S, W],
+    [W, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, F, W, F, F, D, F, F, F, W],
+    [W, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, F, W, F, F, W, F, F, F, W],
+    [W, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, F, W, F, F, W, F, F, F, W],
+    [W, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, F, W, F, F, W, F, F, F, W],
+    [W, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, F, W, F, F, W, F, F, F, W],
+    [W, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W, F, F, F, W],
+    isGround?
+    [W, W, W, W, W, W, W, W, W, W, E, W, W, E, W, W, W, W, W, W, W, W, W, WN,W, W]:
+    [W, W, WN,W, W, WN,W, W, WN,W, WN,W, W, WN,W, W, WN,W, W, WN,W, W, W, WN,W, W],
+  ];
+  return {building:{
+    name:'Office Building',
+    grid:[makeOfficeFloor(true),makeOfficeFloor(false),makeOfficeFloor(false)],
+    materials:{wall:'concrete',floor:'tile',door:'wood',stair:'concrete',ceiling:'plaster',window:'glass'},
+    room_labels:{
+      '6,2,0':'Lobby','6,8,0':'Office A','13,8,0':'Office B','20,8,0':'Conf Room',
+      '12,1,0':'Reception','23,5,0':'Stairs','23,8,0':'Server Room',
+      '3,8,1':'Office C','10,8,1':'Office D','15,8,1':'Office E','20,8,1':'Conf Room 2',
+      '12,2,1':'Open Plan','23,5,1':'Stairs','23,8,1':'Break Room',
+      '3,8,2':'Office F','10,8,2':'Office G','15,8,2':'Office H','20,8,2':'Board Room',
+      '12,2,2':'Open Plan','23,5,2':'Stairs','23,8,2':'Exec Suite',
+    },
+    furniture_notes:{
+      '3,2,0':'Reception desk','8,8,0':'Desk and chair','14,8,0':'Desk and chair',
+      '20,9,0':'Conference table','23,9,0':'Server rack',
+      '4,9,1':'Desk and chair','11,9,1':'Desk and chair','16,9,1':'Desk and chair',
+      '20,9,1':'Conference table','23,9,1':'Kitchen countertop',
+      '4,9,2':'Desk and chair','11,9,2':'Desk and chair','16,9,2':'Desk and chair',
+      '20,9,2':'Conference table','23,9,2':'Sofa',
+    }
+  }};
+}
+
+// ---- PRESET 3: Fire Station (2-story, 28×16) ----
+function makeFireStationJSON(){
+  const W='wall',F='floor',D='door',S='stairwell',WN='window',E='entrance';
+  return {building:{
+    name:'Fire Station',
+    grid:[
+      [ // Floor 1: Apparatus bays + offices
+        [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, D, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, D, F, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, W, W, W, W, D, W, W, W, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, S, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, S, W],
+        [W, F, F, F, F, F, F, F, F, W, W, W, W, W, D, W, W, W, W, W, F, F, F, F, F, D, F, W],
+        [W, F, F, F, F, F, F, F, F, D, F, F, F, F, F, F, W, S, S, W, F, F, F, F, F, W, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, W, S, S, W, F, F, F, F, F, W, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, W, F, F, D, F, F, F, F, F, W, F, W],
+        [W, W, W, W, E, W, W, W, W, W, W, W, E, W, W, W, W, WN,W, W, W, WN,W, E, W, W, WN,W],
+      ],
+      [ // Floor 2: Living quarters
+        [W, W, WN,W, W, WN,W, W, W, W, W, WN,W, W, WN,W, W, W, W, W, W, WN,W, W, WN,W, W, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, W, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, F, F, F, D, F, F, F, F, F, F, F, F, F, D, F, F, F, F, F, F, F, W],
+        [W, W, W, W, D, W, W, W, W, W, W, W, W, W, D, W, W, W, W, W, W, W, D, W, W, W, W, W],
+        [W, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, D, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W],
+        [W, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, F, F, W, W, W, W, D, W, W, W, W],
+        [W, F, F, F, F, F, W, F, F, F, F, F, W, F, F, F, F, F, F, W, F, F, F, F, F, F, S, W],
+        [W, F, F, F, F, F, W, F, F, F, F, F, W, F, F, F, F, F, F, W, F, F, F, F, F, F, S, W],
+        [W, F, F, F, F, F, W, W, W, W, W, W, W, W, W, W, D, W, W, W, F, F, F, F, F, D, F, W],
+        [W, F, F, F, F, F, D, F, F, F, F, F, F, F, F, F, F, W, S, W, F, F, F, F, F, W, F, W],
+        [W, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, W, S, W, F, F, F, F, F, W, F, W],
+        [W, F, F, F, F, F, W, F, F, F, F, F, F, F, F, F, F, W, F, D, F, F, F, F, F, W, F, W],
+        [W, W, WN,W, W, WN,W, W, WN,W, W, WN,W, W, WN,W, W, W, W, W, W, WN,W, W, WN,W, W, W],
+      ]
+    ],
+    materials:{wall:'brick',floor:'concrete',door:'metal',stair:'metal',ceiling:'concrete',window:'glass'},
+    room_labels:{
+      '4,3,0':'Apparatus Bay 1','14,3,0':'Apparatus Bay 2',
+      '4,13,0':'Watch Room','13,13,0':'Turnout Room','17,12,0':'Stairs A',
+      '23,3,0':'Day Room','23,12,0':'Kitchen/Dining','26,9,0':'Stairs B','26,14,0':'Utility',
+      '3,2,1':'Bunk 1','3,8,1':'Bunk 2','3,12,1':'Bunk 3',
+      '13,2,1':'Lounge','13,8,1':'Bathroom','17,12,1':'Stairs A',
+      '23,3,1':'Gym','23,12,1':'Rec Room','26,9,1':'Stairs B','26,14,1':'Storage',
+    },
+    furniture_notes:{
+      '4,3,0':'Fire truck','14,3,0':'Fire truck','4,13,0':'Desk and chair',
+      '13,13,0':'Turnout gear rack','23,2,0':'Sofa and TV wall','23,13,0':'Kitchen countertop and appliances',
+      '2,2,1':'Single bed','2,8,1':'Single bed','2,12,1':'Single bed',
+      '14,2,1':'Sofa','14,9,1':'Toilet and shower','23,2,1':'Exercise equipment','23,13,1':'Dining table',
+    }
+  }};
 }
 function clearAll(){for(const[,e]of placed){scene.remove(e.mesh);e.mesh.geometry.dispose();e.mesh.material.dispose();}placed.clear();fires.clear();for(const fb of falling){scene.remove(fb.mesh);fb.mesh.geometry.dispose();fb.mesh.material.dispose();}falling.length=0;pN=0;isolateMode='none';
   // Remove 3D labels
@@ -1666,6 +1673,7 @@ window.addEventListener('keydown',e=>{
   if(e.key==='m'&&!e.ctrlKey&&!e.metaKey) toggleToolbar();
   if(e.key==='p'&&!e.ctrlKey&&!e.metaKey) togglePhysics();
   if(e.key==='Tab'&&!e.ctrlKey&&!e.metaKey){e.preventDefault();setDim(dimMode==='3d'?'2d':'3d');}
+  if(e.key==='Escape'){toolAnchor=null;document.getElementById('toolInfo').textContent=TOOL_DESCS[buildTool];if(dimMode==='2d')draw2d();}
   if(e.key==='x'&&!e.ctrlKey&&!e.metaKey) setMode(mode==='place'?'erase':'place'); // X toggles mode
   if(e.key==='['&&!e.ctrlKey) layerStep(-1); // [ = layer down
   if(e.key===']'&&!e.ctrlKey) layerStep(1);  // ] = layer up
@@ -1702,6 +1710,7 @@ window.addEventListener('keyup',e=>{keysDown.delete(e.key.toLowerCase());});
 function resetInputState(){
   keysDown.clear();
   orbiting=false;panning=false;paint2=false;erase2=false;pan2Drag=false;
+  toolAnchor=null;
 }
 window.addEventListener('blur',resetInputState);
 window.addEventListener('visibilitychange',()=>{if(document.hidden)resetInputState();});
@@ -2441,14 +2450,97 @@ function draw2d(){
     }
   }
 
+  // --- TOOL PREVIEW (line/rect/wall/room anchor + ghost) ---
+  const erasePreview=mode==='erase';
+  const previewAccent=erasePreview?'rgba(255,80,80,':'rgba(91,240,165,';
+  if(toolAnchor&&hover2.gx!==null){
+    const preview=getToolPreview(hover2.gx,hover2.gz);
+    if(preview){
+      const cc=erasePreview?'#ff4444':(BLOCK_COLORS[selectedBlock]||'#888');
+      // Draw anchor point
+      const ap=worldToScreen2(toolAnchor.gx,toolAnchor.gz);
+      ctx2.fillStyle=previewAccent+'.4)';
+      ctx2.beginPath();ctx2.arc(ap.x,ap.y,z2*.3,0,Math.PI*2);ctx2.fill();
+      ctx2.strokeStyle=previewAccent+'.8)';ctx2.lineWidth=2;
+      ctx2.beginPath();ctx2.arc(ap.x,ap.y,z2*.3,0,Math.PI*2);ctx2.stroke();
+      // Draw preview cells
+      for(const[cx,cz]of preview.cells){
+        const cp=worldToScreen2(cx,cz);
+        ctx2.fillStyle=cc;ctx2.globalAlpha=erasePreview?0.15:0.2;
+        ctx2.fillRect(cp.x-z2/2,cp.y-z2/2,z2,z2);
+        ctx2.globalAlpha=1;
+        ctx2.strokeStyle=previewAccent+'.4)';ctx2.lineWidth=1;
+        ctx2.strokeRect(cp.x-z2/2,cp.y-z2/2,z2,z2);
+        // X marks for erase
+        if(erasePreview&&z2>6){
+          ctx2.strokeStyle=previewAccent+'.3)';ctx2.lineWidth=1;
+          ctx2.beginPath();ctx2.moveTo(cp.x-z2*.25,cp.y-z2*.25);ctx2.lineTo(cp.x+z2*.25,cp.y+z2*.25);ctx2.stroke();
+          ctx2.beginPath();ctx2.moveTo(cp.x+z2*.25,cp.y-z2*.25);ctx2.lineTo(cp.x-z2*.25,cp.y+z2*.25);ctx2.stroke();
+        }
+      }
+      // Count label
+      if(z2>6){
+        const lp=worldToScreen2(hover2.gx,hover2.gz);
+        ctx2.font='bold 9px "JetBrains Mono",monospace';ctx2.fillStyle=previewAccent+'.6)';ctx2.textAlign='left';
+        const verb=erasePreview?'erase':'place';
+        ctx2.fillText(preview.cells.length+' '+verb,lp.x+z2/2+4,lp.y-4);
+        if(preview.type==='wall') ctx2.fillText('('+WALL_H_TOOL+' high)',lp.x+z2/2+4,lp.y+6);
+        if(preview.type==='room'){
+          const w=Math.abs(hover2.gx-toolAnchor.gx)+1,d=Math.abs(hover2.gz-toolAnchor.gz)+1;
+          ctx2.fillText(w+'×'+d+(erasePreview?' demolish':' room'),lp.x+z2/2+4,lp.y+6);
+        }
+      }
+    }
+  }
+  // Show anchor dot even when not hovering
+  else if(toolAnchor){
+    const ap=worldToScreen2(toolAnchor.gx,toolAnchor.gz);
+    ctx2.fillStyle=previewAccent+'.3)';
+    ctx2.beginPath();ctx2.arc(ap.x,ap.y,z2*.25,0,Math.PI*2);ctx2.fill();
+  }
+
   // --- HOVER CURSOR ---
   if(hover2.gx!==null){
     const p=worldToScreen2(hover2.gx,hover2.gz);
     const existingKey=K(hover2.gx,currentLayer,hover2.gz);
     const existing=placed.get(existingKey);
-    if(mode==='place'){
+
+    // Replace tools: special cursor
+    if((buildTool==='replace'||buildTool==='replall')&&existing){
+      const fromName=BLOCKS[existing.type].name;
+      const toName=BLOCKS[selectedBlock].name;
+      const same=existing.type===selectedBlock;
+      const toColor=BLOCK_COLORS[selectedBlock]||'#888';
+      // Highlight hovered block
+      ctx2.fillStyle=same?'rgba(255,255,255,.08)':toColor;
+      ctx2.globalAlpha=same?1:0.35;
+      ctx2.fillRect(p.x-z2/2,p.y-z2/2,z2,z2);
+      ctx2.globalAlpha=1;
+      ctx2.strokeStyle=same?'rgba(255,255,255,.15)':'rgba(255,200,50,.6)';
+      ctx2.lineWidth=1.5;ctx2.strokeRect(p.x-z2/2,p.y-z2/2,z2,z2);
+      // Label
+      if(z2>7){
+        ctx2.font='bold 8px "JetBrains Mono",monospace';ctx2.textAlign='left';
+        if(same){
+          ctx2.fillStyle='rgba(255,255,255,.3)';
+          ctx2.fillText('same type',p.x+z2/2+4,p.y);
+        }else{
+          ctx2.fillStyle='rgba(255,200,50,.6)';
+          ctx2.fillText(fromName+' → '+toName,p.x+z2/2+4,p.y-4);
+          ctx2.font='7px "JetBrains Mono",monospace';ctx2.fillStyle='rgba(255,255,255,.2)';
+          ctx2.fillText(buildTool==='replall'?'(all on layer)':'(connected)',p.x+z2/2+4,p.y+6);
+        }
+      }
+    }
+    // Replace tools on empty cell
+    else if((buildTool==='replace'||buildTool==='replall')&&!existing){
+      ctx2.strokeStyle='rgba(255,255,255,.1)';ctx2.lineWidth=1;
+      ctx2.setLineDash([3,3]);ctx2.strokeRect(p.x-z2/2,p.y-z2/2,z2,z2);ctx2.setLineDash([]);
+      if(z2>8){ctx2.font='8px "JetBrains Mono",monospace';ctx2.fillStyle='rgba(255,255,255,.15)';ctx2.textAlign='left';ctx2.fillText('empty',p.x+z2/2+4,p.y);}
+    }
+    // Normal place mode cursor
+    else if(mode==='place'){
       const bc=BLOCKS[selectedBlock];
-      // Show block color swatch in cursor
       const cc=BLOCK_COLORS[selectedBlock]||'#888';
       ctx2.fillStyle=bc.isFire?'rgba(255,100,0,.25)':cc;
       ctx2.globalAlpha=0.3;
@@ -2456,15 +2548,15 @@ function draw2d(){
       ctx2.globalAlpha=1;
       ctx2.strokeStyle=bc.isFire?'rgba(255,100,0,.6)':'rgba(91,240,165,.5)';
       ctx2.lineWidth=1.5;ctx2.strokeRect(p.x-z2/2,p.y-z2/2,z2,z2);
-      // Block type label
       if(z2>8){
         ctx2.font='bold 8px "JetBrains Mono",monospace';ctx2.fillStyle='rgba(91,240,165,.5)';ctx2.textAlign='left';
         ctx2.fillText(bc.name,p.x+z2/2+4,p.y-4);
         ctx2.font='8px "JetBrains Mono",monospace';ctx2.fillStyle='rgba(255,255,255,.2)';
         ctx2.fillText('('+hover2.gx+','+hover2.gz+')',p.x+z2/2+4,p.y+6);
       }
-    }else{
-      // Erase mode: show X and existing block info
+    }
+    // Erase mode cursor
+    else{
       ctx2.strokeStyle='rgba(255,80,80,.6)';ctx2.lineWidth=1.5;
       ctx2.strokeRect(p.x-z2/2,p.y-z2/2,z2,z2);
       if(existing){
@@ -2472,12 +2564,8 @@ function draw2d(){
         ctx2.fillRect(p.x-z2/2,p.y-z2/2,z2,z2);
         ctx2.beginPath();ctx2.moveTo(p.x-z2*.3,p.y-z2*.3);ctx2.lineTo(p.x+z2*.3,p.y+z2*.3);ctx2.stroke();
         ctx2.beginPath();ctx2.moveTo(p.x+z2*.3,p.y-z2*.3);ctx2.lineTo(p.x-z2*.3,p.y+z2*.3);ctx2.stroke();
-        if(z2>8){
-          ctx2.font='bold 8px "JetBrains Mono",monospace';ctx2.fillStyle='rgba(255,100,100,.5)';ctx2.textAlign='left';
-          ctx2.fillText(BLOCKS[existing.type].name,p.x+z2/2+4,p.y-4);
-        }
+        if(z2>8){ctx2.font='bold 8px "JetBrains Mono",monospace';ctx2.fillStyle='rgba(255,100,100,.5)';ctx2.textAlign='left';ctx2.fillText(BLOCKS[existing.type].name,p.x+z2/2+4,p.y-4);}
       }else{
-        // Empty cell in erase mode: dim cursor
         ctx2.setLineDash([3,3]);ctx2.strokeRect(p.x-z2/2,p.y-z2/2,z2,z2);ctx2.setLineDash([]);
       }
     }
@@ -2522,15 +2610,19 @@ c2d.addEventListener('mousedown',e=>{
   if(e.button===1||(e.button===0&&e.altKey)){
     pan2Drag=true;pan2X0=e.clientX;pan2Y0=e.clientY;panXS=panX;panYS=panY;e.preventDefault();return;
   }
-  // LMB = place (or erase in erase mode) with drag
+  // LMB = tool action or place/erase
   if(e.button===0){
     const w=screenToWorld2(e.clientX,e.clientY);
+    // Try tool first (returns true if handled)
+    if(toolClick2D(w.gx,w.gz)){draw2d();return;}
+    // Pen mode: place/erase with drag
     if(mode==='place'){createBlock(w.gx,currentLayer,w.gz);paint2=true;}
     else{const key=K(w.gx,currentLayer,w.gz);if(placed.has(key))removeBlock(w.gx,currentLayer,w.gz);erase2=true;}
     draw2d();return;
   }
-  // RMB = erase with drag
+  // RMB = erase with drag (cancels tool anchor)
   if(e.button===2){
+    if(toolAnchor){toolAnchor=null;document.getElementById('toolInfo').textContent=TOOL_DESCS[buildTool];draw2d();return;}
     const w=screenToWorld2(e.clientX,e.clientY);
     const key=K(w.gx,currentLayer,w.gz);
     if(placed.has(key)) removeBlock(w.gx,currentLayer,w.gz);
@@ -2543,8 +2635,8 @@ c2d.addEventListener('mousemove',e=>{
   }
   const w=screenToWorld2(e.clientX,e.clientY);
   hover2.gx=w.gx;hover2.gz=w.gz;
-  // Drag painting
-  if(paint2&&mode==='place'){
+  // Drag painting (pen tool only)
+  if(paint2&&mode==='place'&&buildTool==='pen'){
     createBlock(w.gx,currentLayer,w.gz);
   }
   // Drag erasing (LMB in erase mode or RMB)
