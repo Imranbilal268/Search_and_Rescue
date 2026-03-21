@@ -1,8 +1,6 @@
 {
     "$schema": "rescuegrid-v1",
-  
     "building": {
-  
       "meta": {
         "schema_version": "1.0",
         "name": "Basic 2-Story House",
@@ -10,70 +8,101 @@
         "width": 16,
         "height": 12
       },
-  
-      "grid": {
-        "layers": [
-          [
-            ["wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall" ],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
-            ["window","floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "door",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "floor", "floor", "floor", "wall" ],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
-            ["wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stairwell","stairwell","floor","wall"],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stairwell","stairwell","floor","wall"],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
-            ["wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall" ]
-          ],
-          [
-            ["wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall" ],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
-            ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "window"],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "wall" ],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
-            ["wall",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stairwell","stairwell","floor","wall"],
-            ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stairwell","stairwell","floor","wall"],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
-            ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
-            ["wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall" ]
-          ]
+      "grid": [
+        [
+          ["wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall" ],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
+          ["window","floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "door",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "floor", "floor", "floor", "wall" ],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
+          ["wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stairwell","stairwell","floor","wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stairwell","stairwell","floor","wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
+          ["wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall" ]
+        ],
+        [
+          ["wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "window","wall",  "wall" ],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
+          ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "window"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "wall" ],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
+          ["wall",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "floor", "floor", "floor", "floor", "wall",  "floor", "floor", "floor", "wall" ],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stairwell","stairwell","floor","wall"],
+          ["window","floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",  "stairwell","stairwell","floor","wall"],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
+          ["wall",  "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall" ],
+          ["wall",  "wall",  "window","wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall" ]
         ]
-      },
-  
+      ],
       "cell_properties": {
-        "6,3,0":  { "locked": false, "label": "Living to kitchen door" },
-        "3,6,0":  { "locked": false, "label": "Front entrance" },
-        "2,0,0":  { "label": "Living room north window" },
-        "0,2,0":  { "requires": "ladder", "label": "Living room west window" },
-        "9,3,1":  { "locked": false, "label": "Bathroom door" },
-        "4,6,1":  { "locked": false, "label": "Master bedroom door" },
-        "2,0,1":  { "label": "Master bedroom north window" },
-        "0,2,1":  { "label": "Master bedroom west window" },
-        "13,0,1": { "label": "Bedroom 3 north window" },
-        "15,2,1": { "label": "Bedroom 3 east window" },
-        "2,11,1": { "label": "Bedroom 2 south window" },
-        "0,8,1":  { "label": "Bedroom 2 west window" }
+        "6,3,0": {
+          "locked": false,
+          "label": "Living to kitchen door"
+        },
+        "3,6,0": {
+          "locked": false,
+          "label": "Front entrance"
+        },
+        "2,0,0": {
+          "label": "Living room north window"
+        },
+        "0,2,0": {
+          "requires": "ladder",
+          "label": "Living room west window"
+        },
+        "9,2,0": {
+          "label": "Kitchen",
+          "fire_accelerant": true
+        },
+        "9,3,1": {
+          "locked": false,
+          "label": "Bathroom door"
+        },
+        "4,6,1": {
+          "locked": false,
+          "label": "Master bedroom door"
+        },
+        "2,0,1": {
+          "label": "Master bedroom north window"
+        },
+        "0,2,1": {
+          "label": "Master bedroom west window"
+        },
+        "13,0,1": {
+          "label": "Bedroom 3 north window"
+        },
+        "15,2,1": {
+          "label": "Bedroom 3 east window"
+        },
+        "2,11,1": {
+          "label": "Bedroom 2 south window"
+        },
+        "0,8,1": {
+          "label": "Bedroom 2 west window"
+        }
       },
-  
       "vertical_connections": [
         {
           "id": "stairwell_main",
           "type": "stairwell",
           "label": "Main Staircase",
-          "x": 12, "y": 7,
+          "x": 12,
+          "y": 7,
           "floors": [0, 1],
           "traversal_cost": 3,
           "victim_carry_cost_multiplier": 2.0
         },
         {
-          "id": "window_living_room_west",
+          "id": "window_living_west",
           "type": "window",
           "label": "Living Room West Window Exit",
-          "x": 0, "y": 2, "floor": 0,
+          "x": 0,
+          "y": 2,
+          "floor": 0,
           "traversal_cost": 5,
           "requires": null
         },
@@ -81,7 +110,9 @@
           "id": "window_master_north",
           "type": "window",
           "label": "Master Bedroom North Window",
-          "x": 2, "y": 0, "floor": 1,
+          "x": 2,
+          "y": 0,
+          "floor": 1,
           "traversal_cost": 7,
           "requires": "ladder"
         },
@@ -89,7 +120,9 @@
           "id": "window_master_west",
           "type": "window",
           "label": "Master Bedroom West Window",
-          "x": 0, "y": 2, "floor": 1,
+          "x": 0,
+          "y": 2,
+          "floor": 1,
           "traversal_cost": 7,
           "requires": "ladder"
         },
@@ -97,7 +130,9 @@
           "id": "window_bedroom2_south",
           "type": "window",
           "label": "Bedroom 2 South Window",
-          "x": 2, "y": 11, "floor": 1,
+          "x": 2,
+          "y": 11,
+          "floor": 1,
           "traversal_cost": 7,
           "requires": "ladder"
         },
@@ -105,7 +140,9 @@
           "id": "window_bedroom2_west",
           "type": "window",
           "label": "Bedroom 2 West Window",
-          "x": 0, "y": 8, "floor": 1,
+          "x": 0,
+          "y": 8,
+          "floor": 1,
           "traversal_cost": 7,
           "requires": "ladder"
         },
@@ -113,7 +150,9 @@
           "id": "window_bedroom3_north",
           "type": "window",
           "label": "Bedroom 3 North Window",
-          "x": 13, "y": 0, "floor": 1,
+          "x": 13,
+          "y": 0,
+          "floor": 1,
           "traversal_cost": 7,
           "requires": "ladder"
         },
@@ -121,37 +160,94 @@
           "id": "window_bedroom3_east",
           "type": "window",
           "label": "Bedroom 3 East Window",
-          "x": 15, "y": 2, "floor": 1,
+          "x": 15,
+          "y": 2,
+          "floor": 1,
           "traversal_cost": 7,
           "requires": "ladder"
         }
       ],
-  
       "exit_nodes": [
-        { "id": "exit_front", "x": 3, "y": 6, "z": 0, "label": "Front Entrance", "always_open": true }
+        {
+          "id": "exit_front",
+          "x": 3,
+          "y": 6,
+          "z": 0,
+          "label": "Front Entrance",
+          "always_open": true
+        },
+        {
+          "id": "exit_window_west",
+          "x": 0,
+          "y": 2,
+          "z": 0,
+          "label": "West Window Ground Exit",
+          "always_open": true
+        }
       ],
-  
       "floor_labels": {
         "0": "Ground Floor",
         "1": "First Floor"
-      },
-  
-      "room_labels": {
-        "3,3,0":  "Living room",
-        "3,9,0":  "Garage",
-        "9,2,0":  "Kitchen",
-        "13,6,0": "Dining room",
-        "3,2,1":  "Master bedroom",
-        "3,9,1":  "Bedroom 2",
-        "8,4,1":  "Bathroom",
-        "13,2,1": "Bedroom 3"
       }
     },
-  
     "scenario": {
-      "responders": [],
-      "victims": [],
-      "threat": null,
+      "responders": [
+        {
+          "id": "R1",
+          "label": "Alpha - Breacher",
+          "x": 3,
+          "y": 6,
+          "z": 0,
+          "equipment": ["ax", "medic_kit"]
+        },
+        {
+          "id": "R2",
+          "label": "Bravo - Climber",
+          "x": 3,
+          "y": 6,
+          "z": 0,
+          "equipment": ["ladder"]
+        }
+      ],
+      "victims": [
+        {
+          "id": "V1",
+          "label": "Resident - Living Room",
+          "x": 3,
+          "y": 3,
+          "z": 0,
+          "mobility": "mobile"
+        },
+        {
+          "id": "V2",
+          "label": "Resident - Master Bedroom",
+          "x": 3,
+          "y": 2,
+          "z": 1,
+          "mobility": "injured"
+        },
+        {
+          "id": "V3",
+          "label": "Resident - Bedroom 2",
+          "x": 3,
+          "y": 9,
+          "z": 1,
+          "mobility": "mobile"
+        }
+      ],
+      "threat": {
+        "type": "fire",
+        "origin": {
+          "x": 9,
+          "y": 2,
+          "z": 0
+        },
+        "fire_params": {
+          "spread_probability": 0.4,
+          "stairwell_acceleration": 2.0,
+          "accelerant_bonus": 0.3
+        }
+      },
       "simulation_config": {
         "max_turns": 40,
         "elevator_enabled": false,
