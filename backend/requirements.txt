@@ -1,0 +1,13 @@
+# RescueGrid Phase 0 — Python backend dependencies
+#
+# Install with:
+#   pip install -r requirements.txt
+#
+# All other imports (heapq, collections, math, random, json, copy, time)
+# are Python stdlib and require no installation.
+ 
+# Hungarian algorithm (linear_sum_assignment) used in assignment.py
+scipy>=1.9.0
+ 
+# Required by scipy; also used directly for cost matrix construction in assignment.py
+numpy>=1.23.0
