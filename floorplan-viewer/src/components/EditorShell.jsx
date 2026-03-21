@@ -4,6 +4,7 @@ import FloorToggle   from "./Floortoggle";
 import GridView      from "./GridView";
 import StampPalette  from "./Stamppalette";
 import FloorCanvas   from "./Floorcanvas";
+import SimView       from "./SimView";
 import { compileAllFloors } from "./StampComplier";
 import { createStamp, updateStamp, STAMP_TYPES } from "./Stamptypes";
 import { gridToStamps } from "./GridToStamps";
@@ -55,9 +56,10 @@ function buildWallBorder(width, height) {
 
 export default function EditorShell() {
   // ── Mode & active floor ───────────────────────────────────────────────────
-  const [mode,        setMode]        = useState(null);   // null = landing
+  const [mode,              setMode]              = useState(null);
   const [activeFloor,       setActiveFloor]       = useState(0);
   const [selectedStampType, setSelectedStampType] = useState(null);
+  const [viewMode,          setViewMode]          = useState("floorplan"); // "floorplan" | "3d"
 
   // ── Upload mode state ─────────────────────────────────────────────────────
   const [building, setBuilding] = useState(null);
@@ -377,16 +379,36 @@ export default function EditorShell() {
         </div>
       </header>
 
-      {/* ── Floor tabs ── */}
-      <FloorToggle
-        count={floorCount}
-        active={activeFloor}
-        onChange={setActiveFloor}
-      />
+      {/* ── View mode tabs ── */}
+      <div style={styles.viewTabs}>
+        <button
+          style={{ ...styles.viewTab, ...(viewMode === "floorplan" ? styles.viewTabActive : {}) }}
+          onClick={() => setViewMode("floorplan")}
+        >
+          🗺 Floor Plan
+        </button>
+        <button
+          style={{ ...styles.viewTab, ...(viewMode === "3d" ? styles.viewTabActive : {}) }}
+          onClick={() => setViewMode("3d")}
+        >
+          🧊 3D View
+        </button>
+      </div>
 
-      {/* ── Main canvas area ── */}
+      {/* ── Floor tabs — floor plan mode only ── */}
+      {viewMode === "floorplan" && (
+        <FloorToggle
+          count={floorCount}
+          active={activeFloor}
+          onChange={setActiveFloor}
+        />
+      )}
+
+      {/* ── Main content ── */}
       <main style={styles.main}>
-        {mode === "stamps" ? (
+        {viewMode === "3d" ? (
+          <SimView />
+        ) : mode === "stamps" ? (
           // Stamp editor: palette sidebar + interactive canvas
           <div style={styles.editorRow}>
             <StampPalette
@@ -547,6 +569,31 @@ const styles = {
     alignItems: "flex-start",
     width:      "100%",
     flex:       1,
+  },
+  viewTabs: {
+    display:       "flex",
+    gap:           "0.5rem",
+    width:         "100%",
+    borderBottom:  "2px solid #e5e7eb",
+  },
+  viewTab: {
+    padding:         "0.45rem 1.1rem",
+    fontSize:        "0.85rem",
+    fontWeight:      "600",
+    border:          "1px solid #ddd",
+    borderBottom:    "2px solid transparent",
+    borderRadius:    "6px 6px 0 0",
+    backgroundColor: "#f5f5f5",
+    cursor:          "pointer",
+    color:           "#666",
+    marginBottom:    "-2px",
+    transition:      "background-color 0.15s, color 0.15s",
+  },
+  viewTabActive: {
+    backgroundColor: "#fff",
+    color:           "#1a1a1a",
+    borderColor:     "#e5e7eb",
+    borderBottomColor: "#fff",
   },
 };
 
