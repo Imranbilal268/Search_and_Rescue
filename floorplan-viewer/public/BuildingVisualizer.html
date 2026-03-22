@@ -206,6 +206,24 @@ body.sim-mode #simBar{pointer-events:all}
 #simCamHint{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,.18);pointer-events:none;white-space:nowrap;letter-spacing:.4px;display:none}
 body.sim-mode #simCamHint{display:block}
 
+/* ===== SCENARIO EDITOR MODE (embedded in React scenario builder) ===== */
+/* Hide building construction UI — keep ctrl-panel (Layers/View tabs) visible */
+body.scenario-editor .toolbar,
+body.scenario-editor .hint,
+body.scenario-editor .plan-info,
+body.scenario-editor .dim-toggle,
+body.scenario-editor .top-left{display:none!important}
+/* Hide Build tab button and its content panel */
+body.scenario-editor .ctrl-tab[data-tab="build"],
+body.scenario-editor .ctrl-section[data-tab="build"]{display:none!important}
+body.scenario-editor #ui{pointer-events:none}
+body.scenario-editor .ctrl-panel,
+body.scenario-editor #scenarioPlacementHint,
+body.scenario-editor #simBar{pointer-events:all}
+/* Placement hint bar */
+#scenarioPlacementHint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(91,240,165,.8);pointer-events:none;white-space:nowrap;z-index:20;background:rgba(10,10,18,.88);padding:8px 18px;border-radius:10px;border:1px solid rgba(91,240,165,.25);letter-spacing:.5px}
+body.scenario-editor #scenarioPlacementHint{pointer-events:none}
+
 /* ===== SIMULATION TIMELINE ===== */
 #simBar{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:6px;pointer-events:all;z-index:20;background:rgba(10,10,18,.92);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px 16px;min-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
 #simBar.active{display:flex}
@@ -240,6 +258,7 @@ body.sim-mode #simCamHint{display:block}
   <!-- TOP-LEFT: Title -->
   <div class="top-left"><h1>Block Builder</h1><span class="subtitle">Fire &amp; Structure Sim</span></div>
   <div id="simCamHint">Drag to rotate · Right-drag to pan · Scroll to zoom</div>
+  <div id="scenarioPlacementHint">📍 Click to place</div>
 
   <!-- RIGHT: Tabbed Control Panel -->
   <div class="ctrl-panel" id="ctrlPanel">
@@ -1746,6 +1765,36 @@ cvs.addEventListener('contextmenu',e=>e.preventDefault());
 
 // Mouse: LMB=place, RMB=orbit, MMB=pan, Scroll=zoom, Shift+Scroll=layer
 cvs.addEventListener('mousedown',e=>{
+  // Scenario editor placement mode: LMB places entity, RMB cancels
+  if(scenarioPlacementMode){
+    if(e.button===2){enterScenarioPlacement(null);e.preventDefault();return;}
+    if(e.button===0){
+      // Get the hit block's own position (not adjacent face)
+      ray.setFromCamera(mouse,camera);
+      const meshes=[];placed.forEach(en=>meshes.push(en.mesh));
+      const hits=ray.intersectObjects(meshes);
+      let gridCoords=null;
+      if(hits.length>0){
+        let fE=null;for(const[,en]of placed)if(en.mesh===hits[0].object){fE=en;break;}
+        if(fE)gridCoords=gridCoordsFrom3D(fE.gx,fE.gy,fE.gz);
+      }
+      if(!gridCoords){
+        // Fallback: project onto current floor plane
+        if(Math.abs(ray.ray.direction.y)>.001){
+          const baseYPlane=currentLayer;
+          const t2=(baseYPlane-ray.ray.origin.y)/ray.ray.direction.y;
+          if(t2>0){const pt=ray.ray.origin.clone().add(ray.ray.direction.clone().multiplyScalar(t2));
+            const h=GRID/2,gx=Math.round(pt.x),gz=Math.round(pt.z);
+            if(gx>=-h&&gx<h&&gz>=-h&&gz<h)gridCoords=gridCoordsFrom3D(gx,baseYPlane,gz);}
+        }
+      }
+      if(gridCoords){
+        window.parent.postMessage({type:'RESCUEGRID_CELL_CLICK',payload:gridCoords},'*');
+        enterScenarioPlacement(null);
+      }
+      e.preventDefault();return;
+    }
+  }
   if(simData){
     // Sim mode: LMB = orbit, RMB/MMB = pan
     if(e.button===0||e.button===2){orbiting=(e.button===0);panning=(e.button===2);pmx=e.clientX;pmy=e.clientY;e.preventDefault();return;}
@@ -2855,6 +2904,34 @@ window.addEventListener('resize',()=>{
   if(dimMode==='2d'){resize2d();draw2d();}
 });
 
+// ===== SCENARIO EDITOR STATE =====
+let scenarioPlacementMode=null; // 'place-responder'|'place-victim'|'place-fire'|'place-exit'|'place-stairwell'|null
+let bldCols=20, bldRows=16;     // building grid dimensions for coord conversion (set on load)
+const WALL_H_JSON=3;            // floor height used in parseFloorplanJSON
+
+function enterScenarioPlacement(modeStr){
+  scenarioPlacementMode=modeStr;
+  const hint=document.getElementById('scenarioPlacementHint');
+  if(!hint)return;
+  if(modeStr){
+    const labels={'place-responder':'📍 Click to place Responder','place-victim':'📍 Click to place Victim',
+      'place-fire':'🔥 Click to place Fire Origin','place-exit':'🚪 Click to place Exit Node',
+      'place-stairwell':'↕ Click to place Stairwell','place-cell-prop':'🏷 Click to tag Cell'};
+    hint.textContent=labels[modeStr]||'📍 Click to place';
+    hint.style.display='block';
+  } else {
+    hint.style.display='none';
+  }
+}
+
+function gridCoordsFrom3D(gx,gy,gz){
+  // Convert 3D block coords back to building grid coords
+  const floor=Math.max(0,Math.floor(gy/(WALL_H_JSON+1)));
+  const x=gx+Math.floor(bldCols/2);
+  const y=gz+Math.floor(bldRows/2);
+  return{x,y,z:floor};
+}
+
 // ===== SIMULATION VIEWER =====
 let simData=null, simTurn=0, simPlaying=false, simPlayTimer=null;
 const agentGroup=new THREE.Group();scene.add(agentGroup);
@@ -3240,8 +3317,12 @@ window.addEventListener('message',function(e){
     for(const b of blocks)addBlock(b[0],b[1],b[2],b[3],b[4]);
     for(const[k]of placed)rebuildGeo(k);
     const bldg=json.building||json;
+    // Store building dimensions for coordinate back-conversion during placement
+    const bldGrids=extractFloorGrids(bldg);
+    const bldG0=bldGrids[0];
+    if(bldG0){const{cols,numRows}=gridDims(bldG0);bldCols=cols;bldRows=numRows;}
     if(bldg.room_labels){
-      const grids=extractFloorGrids(bldg);const g0=grids[0];
+      const g0=bldGrids[0];
       const{cols,numRows}=g0?gridDims(g0):{cols:16,numRows:12};
       const ox=-Math.floor(cols/2),oz=-Math.floor(numRows/2);const WH=3;
       const labels=flattenFloorMap(bldg.room_labels);
@@ -3249,18 +3330,38 @@ window.addEventListener('message',function(e){
         addRoomLabel(ox+c.x,fi*(WH+1)+2.5,oz+c.z,item.label);}
     }
     updateStats();camFocus();
-    // Also show scenario agents if present
-    if(json.scenario){
-      simData={grid:bldg.grid||json.grid, states:[{turn:0,status:'preview',
-        threat_state:{consumed_nodes:[[json.scenario.threat.origin.x,json.scenario.threat.origin.y,json.scenario.threat.origin.z]],frontier_nodes:[]},
-        responder_states:json.scenario.responders.map(r=>({id:r.id,position:[r.x,r.y,r.z],status:'routing'})),
-        victim_states:json.scenario.victims.map(v=>({id:v.id,position:[v.x,v.y,v.z],status:'waiting'}))}]};
-      document.getElementById('simBar').classList.add('active');
-      document.getElementById('simScrubber').max=0;
-      document.getElementById('simTurnLbl').textContent='T0 / T0';
-      document.getElementById('simStatusLbl').textContent='PREVIEW';
-      simGoTo(0);
-    }
+    // Enter scenario-editor mode (hides building tools, enables placement clicks)
+    document.body.classList.add('scenario-editor');
+    // Switch control panel to Layers tab (Build tab is hidden in this mode)
+    setCtrlTab('layers');
+    // Show scenario agents if present
+    const sc=json.scenario;
+    const previewThreatNodes=sc&&sc.threat&&sc.threat.origin
+      ?[[sc.threat.origin.x,sc.threat.origin.y,sc.threat.origin.z]]:[];
+    const previewResponders=(sc&&sc.responders)?sc.responders.map(r=>({id:r.id,position:[r.x,r.y,r.z],status:'routing'})):[];
+    const previewVictims=(sc&&sc.victims)?sc.victims.map(v=>({id:v.id,position:[v.x,v.y,v.z],status:'waiting'})):[];
+    simData={grid:bldg.grid||json.grid||bldGrids, states:[{turn:0,status:'preview',
+      threat_state:{consumed_nodes:previewThreatNodes,frontier_nodes:[]},
+      responder_states:previewResponders,victim_states:previewVictims}]};
+    document.getElementById('simBar').classList.add('active');
+    document.getElementById('simScrubber').max=0;
+    document.getElementById('simTurnLbl').textContent='T0 / T0';
+    document.getElementById('simStatusLbl').textContent='PREVIEW';
+    simGoTo(0);
+  } else if(e.data.type==='RESCUEGRID_PLACEMENT_MODE'){
+    // Enter or cancel entity placement mode
+    enterScenarioPlacement(e.data.payload||null);
+  } else if(e.data.type==='RESCUEGRID_UPDATE_AGENTS'){
+    // Refresh agent markers after entity list changes (no geometry rebuild needed)
+    if(!simData)return;
+    const sc=e.data.payload;
+    const threatNodes=sc&&sc.threat&&sc.threat.origin
+      ?[[sc.threat.origin.x,sc.threat.origin.y,sc.threat.origin.z]]:[];
+    simData.states[0]={turn:0,status:'preview',
+      threat_state:{consumed_nodes:threatNodes,frontier_nodes:[]},
+      responder_states:(sc.responders||[]).map(r=>({id:r.id,position:[r.x,r.y,r.z],status:'routing'})),
+      victim_states:(sc.victims||[]).map(v=>({id:v.id,position:[v.x,v.y,v.z],status:'waiting'}))};
+    simGoTo(0);
   }
 });
 

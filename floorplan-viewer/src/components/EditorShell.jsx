@@ -179,6 +179,7 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
   const [cellPropsMap,   setCellPropsMap]  = useState({});
   const [scenarioMode,   setScenarioMode]  = useState(null); // 'place-responder'|'place-victim'|'place-fire'|'place-exit'|'place-stairwell'|'place-cell-prop'
   const [showScenario,  setShowScenario]  = useState(true);
+  const [sidebarTab,    setSidebarTab]    = useState('entities'); // 'entities'|'building'|'config'
 
   // Auto-load shared JSON → go straight to stamps mode
   useEffect(() => {
@@ -458,6 +459,47 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
   function removeCellProp(key)        { setCellPropsMap(prev => { const n = { ...prev }; delete n[key]; return n; }); }
   function updateCellProp(key, patch) { setCellPropsMap(prev => ({ ...prev, [key]: { ...(prev[key] || {}), ...patch } })); }
 
+  // ── 3D view entity placement ───────────────────────────────────────────
+  // Called when user clicks a cell in the 3D viewer (x, y, z are grid coords)
+  const onCellClick3d = useCallback((x, y, z) => {
+    if (scenarioMode === 'place-responder') {
+      setResponders(prev => {
+        const n = prev.length + 1;
+        return [...prev, { id: 'R' + n, label: 'Responder ' + n, x, y, z, equipment: [] }];
+      });
+      setScenarioMode(null);
+    } else if (scenarioMode === 'place-victim') {
+      setVictims(prev => {
+        const n = prev.length + 1;
+        return [...prev, { id: 'V' + n, label: 'Victim ' + n, x, y, z, mobility: 'immobile' }];
+      });
+      setScenarioMode(null);
+    } else if (scenarioMode === 'place-fire') {
+      setThreat(prev => ({
+        type: 'fire',
+        origin: { x, y, z },
+        fire_params: prev?.fire_params ?? { spread_probability: 0.4, stairwell_acceleration: 2.0, accelerant_bonus: 0.3 },
+      }));
+      setScenarioMode(null);
+    } else if (scenarioMode === 'place-exit') {
+      setExitNodes(prev => {
+        const n = prev.length + 1;
+        return [...prev, { id: 'exit_' + n, x, y, z, label: 'Exit ' + n, always_open: true }];
+      });
+      setScenarioMode(null);
+    } else if (scenarioMode === 'place-stairwell') {
+      setVertConn(prev => {
+        const n = prev.length + 1;
+        return [...prev, { id: 'stairwell_' + n, type: 'stairwell', label: 'Stairwell ' + n, x, y, floors: [z], traversal_cost: 3, victim_carry_cost_multiplier: 2.0 }];
+      });
+      setScenarioMode(null);
+    } else if (scenarioMode === 'place-cell-prop') {
+      const key = `${x},${y},${z}`;
+      setCellPropsMap(prev => ({ ...prev, [key]: prev[key] ?? { label: '', locked: false } }));
+      setScenarioMode(null);
+    }
+  }, [scenarioMode]);
+
   // ── Threat helpers ──────────────────────────────────────────────────────
   function updateFireParam(key, val) {
     setThreat(prev => prev ? {
@@ -571,18 +613,20 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Grid resize */}
-          <div style={S.dimRow}>
-              {[['W', 'width', 3, 50], ['H', 'height', 3, 50], ['FL', 'floorCount', 1, 20]].map(([lbl, field, mn, mx]) => (
-                <label key={field} style={S.dimLabel}>
-                  <span style={S.dimLblTxt}>{lbl}</span>
-                  <input type="number" min={mn} max={mx} value={gridMeta[field]}
-                    onChange={e => handleResizeGrid(field, e.target.value)}
-                    style={S.dimInput} />
-                </label>
-              ))}
-          </div>
-          {rawJson && (
+          {/* Grid resize — only relevant in floorplan editor mode */}
+          {viewMode === 'floorplan' && (
+            <div style={S.dimRow}>
+                {[['W', 'width', 3, 50], ['H', 'height', 3, 50], ['FL', 'floorCount', 1, 20]].map(([lbl, field, mn, mx]) => (
+                  <label key={field} style={S.dimLabel}>
+                    <span style={S.dimLblTxt}>{lbl}</span>
+                    <input type="number" min={mn} max={mx} value={gridMeta[field]}
+                      onChange={e => handleResizeGrid(field, e.target.value)}
+                      style={S.dimInput} />
+                  </label>
+                ))}
+            </div>
+          )}
+          {viewMode === 'floorplan' && rawJson && (
             <button style={S.topBtn} onClick={handleOpenInBuildingEditor}>
               🏗 Building Editor
             </button>
@@ -614,7 +658,7 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
           </button>
         ))}
         <div style={{ flex: 1 }} />
-        {viewMode === 'floorplan' && canPlace && (
+        {canPlace && (
           <button style={{ ...S.tab, color: C.textDim, fontSize: 9 }}
             onClick={() => setScenarioMode(null)}>
             ✕ Cancel placement
@@ -633,7 +677,12 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
         {/* ── Main content ── */}
         <div style={S.mainArea}>
           {viewMode === "3d" ? (
-            <SimView rawJson={rawJson} />
+            <SimView
+              rawJson={rawJson}
+              scenarioMode={scenarioMode}
+              liveScenario={liveScenario}
+              onCellClick={onCellClick3d}
+            />
           ) : (
             <div style={S.editorRow}>
               <StampPalette selectedType={selectedStampType} onSelect={setSelectedStampType} />
@@ -657,268 +706,268 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
         {/* ── Scenario sidebar ── */}
         {showScenario && (
           <div style={S.sidebar}>
-            <div style={S.sidebarTitle}>Scenario</div>
 
-            {/* Responders */}
-            <div style={S.sideSection}>
-              <div style={S.sideSectionHeader}>
-                <span style={{ ...S.sideLabel, color: C.blue }}>● RESPONDERS</span>
-                <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{responders.length}</span>
-              </div>
-              {responders.map((r, i) => (
-                <EntityRow key={r.id}
-                  entity={r} type="responder" index={i}
-                  floorCount={floorCount}
-                  onRemove={() => removeResponder(r.id)}
-                  onFloorChange={z => updateEntityFloor('responder', r.id, z)}
-                  onCoordChange={(f, v) => updateEntityCoord('responder', r.id, f, v)}
-                  onLabelChange={lbl => updateEntityLabel('responder', r.id, lbl)}
-                  onEquipmentChange={eq => updateResponderEquipment(r.id, eq)}
-                />
+            {/* Tab bar */}
+            <div style={S.sideTabBar}>
+              {[['entities','👥','Entities'],['building','🏗','Building'],['config','⚙','Config']].map(([id, icon, lbl]) => (
+                <button key={id}
+                  style={{ ...S.sideTab, ...(sidebarTab === id ? S.sideTabActive : {}) }}
+                  onClick={() => setSidebarTab(id)}
+                >
+                  <span style={{ fontSize: 12 }}>{icon}</span>
+                  <span>{lbl}</span>
+                </button>
               ))}
-              <button
-                style={{ ...S.addBtn, borderColor: C.blueBdr, color: C.blue, background: scenarioMode === 'place-responder' ? C.blueBg : 'transparent' }}
-                onClick={() => setScenarioMode(scenarioMode === 'place-responder' ? null : 'place-responder')}
-              >
-                + {scenarioMode === 'place-responder' ? 'Click grid to place…' : 'Add Responder'}
-              </button>
             </div>
 
-            <div style={S.divider} />
+            {/* ── ENTITIES tab ── */}
+            {sidebarTab === 'entities' && (
+              <div style={S.tabPane}>
 
-            {/* Victims */}
-            <div style={S.sideSection}>
-              <div style={S.sideSectionHeader}>
-                <span style={{ ...S.sideLabel, color: C.amber }}>● VICTIMS</span>
-                <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{victims.length}</span>
-              </div>
-              {victims.map((v, i) => (
-                <EntityRow key={v.id}
-                  entity={v} type="victim" index={i}
-                  floorCount={floorCount}
-                  onRemove={() => removeVictim(v.id)}
-                  onFloorChange={z => updateEntityFloor('victim', v.id, z)}
-                  onCoordChange={(f, val) => updateEntityCoord('victim', v.id, f, val)}
-                  onLabelChange={lbl => updateEntityLabel('victim', v.id, lbl)}
-                  onMobilityChange={m => updateVictimMobility(v.id, m)}
+                <SideHeader label="RESPONDERS" count={responders.length} color={C.blue} />
+                {responders.map((r, i) => (
+                  <EntityRow key={r.id} entity={r} type="responder" index={i} floorCount={floorCount}
+                    onRemove={() => removeResponder(r.id)}
+                    onFloorChange={z => updateEntityFloor('responder', r.id, z)}
+                    onCoordChange={(f, v) => updateEntityCoord('responder', r.id, f, v)}
+                    onLabelChange={lbl => updateEntityLabel('responder', r.id, lbl)}
+                    onEquipmentChange={eq => updateResponderEquipment(r.id, eq)}
+                  />
+                ))}
+                <PlaceButton
+                  active={scenarioMode === 'place-responder'} color={C.blue} bg={C.blueBg} border={C.blueBdr}
+                  label="Add Responder" activeLabel="Click grid to place…"
+                  onClick={() => setScenarioMode(scenarioMode === 'place-responder' ? null : 'place-responder')}
                 />
-              ))}
-              <button
-                style={{ ...S.addBtn, borderColor: C.amberBdr, color: C.amber, background: scenarioMode === 'place-victim' ? C.amberBg : 'transparent' }}
-                onClick={() => setScenarioMode(scenarioMode === 'place-victim' ? null : 'place-victim')}
-              >
-                + {scenarioMode === 'place-victim' ? 'Click grid to place…' : 'Add Victim'}
-              </button>
-            </div>
 
-            <div style={S.divider} />
+                <div style={S.divider} />
 
-            {/* Threats */}
-            <div style={S.sideSection}>
-              <div style={S.sideSectionHeader}>
-                <span style={{ ...S.sideLabel, color: '#ff6030' }}>🔥 THREATS</span>
-                {threat && <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>1</span>}
+                <SideHeader label="VICTIMS" count={victims.length} color={C.amber} />
+                {victims.map((v, i) => (
+                  <EntityRow key={v.id} entity={v} type="victim" index={i} floorCount={floorCount}
+                    onRemove={() => removeVictim(v.id)}
+                    onFloorChange={z => updateEntityFloor('victim', v.id, z)}
+                    onCoordChange={(f, val) => updateEntityCoord('victim', v.id, f, val)}
+                    onLabelChange={lbl => updateEntityLabel('victim', v.id, lbl)}
+                    onMobilityChange={m => updateVictimMobility(v.id, m)}
+                  />
+                ))}
+                <PlaceButton
+                  active={scenarioMode === 'place-victim'} color={C.amber} bg={C.amberBg} border={C.amberBdr}
+                  label="Add Victim" activeLabel="Click grid to place…"
+                  onClick={() => setScenarioMode(scenarioMode === 'place-victim' ? null : 'place-victim')}
+                />
+
+                <div style={S.divider} />
+
+                <SideHeader label="FIRE THREAT" count={threat ? 1 : 0} color="#ff6030" />
+                {threat ? (
+                  <FireCard
+                    threat={threat} floorCount={floorCount}
+                    scenarioMode={scenarioMode}
+                    onRemove={() => setThreat(null)}
+                    onOriginChange={updateFireOriginCoord}
+                    onParamChange={updateFireParam}
+                    onReposition={() => setScenarioMode(scenarioMode === 'place-fire' ? null : 'place-fire')}
+                  />
+                ) : (
+                  <PlaceButton
+                    active={scenarioMode === 'place-fire'} color="#ff6030" bg="rgba(255,96,48,.08)" border="rgba(255,96,48,.25)"
+                    label="Add Fire Threat" activeLabel="Click grid to place…"
+                    onClick={() => setScenarioMode(scenarioMode === 'place-fire' ? null : 'place-fire')}
+                  />
+                )}
               </div>
+            )}
 
-              {threat ? (
-                <div style={{ background: 'rgba(255,96,48,.05)', border: '1px solid rgba(255,96,48,.15)', borderRadius: 7, padding: '8px', marginBottom: 5 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-                    <span style={{ fontFamily: C.mono, fontSize: 9, color: '#ff6030', fontWeight: 700 }}>FIRE</span>
-                    <button onClick={() => setThreat(null)} style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
-                  </div>
-                  {/* Origin coords */}
-                  <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 4, letterSpacing: '.5px' }}>ORIGIN</div>
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
-                    {[['x', threat.origin.x], ['y', threat.origin.y]].map(([field, val]) => (
-                      <label key={field} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                        <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{field.toUpperCase()}</span>
-                        <input type="number" min={0} value={val}
-                          onChange={e => updateFireOriginCoord(field, e.target.value)}
-                          style={S.entityInput} />
-                      </label>
-                    ))}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>FL</span>
-                      <input type="number" min={0} max={Math.max(0, floorCount - 1)} value={threat.origin.z}
-                        onChange={e => updateFireOriginCoord('z', e.target.value)}
-                        style={S.entityInput} />
-                    </label>
-                  </div>
-                  {/* Fire params */}
-                  <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 4, letterSpacing: '.5px' }}>PARAMS</div>
+            {/* ── BUILDING tab ── */}
+            {sidebarTab === 'building' && (
+              <div style={S.tabPane}>
+
+                <SideHeader label="EXIT NODES" count={exitNodes.length} color="#22c55e" />
+                {exitNodes.map((node) => (
+                  <ExitNodeRow key={node.id} node={node} floorCount={floorCount}
+                    onRemove={() => removeExitNode(node.id)}
+                    onUpdate={patch => updateExitNode(node.id, patch)}
+                  />
+                ))}
+                <PlaceButton
+                  active={scenarioMode === 'place-exit'} color="#22c55e" bg="rgba(34,197,94,.08)" border="rgba(34,197,94,.3)"
+                  label="Add Exit Node" activeLabel="Click grid to place…"
+                  onClick={() => setScenarioMode(scenarioMode === 'place-exit' ? null : 'place-exit')}
+                />
+
+                <div style={S.divider} />
+
+                <SideHeader label="VERTICAL CONN." count={vertConnections.length} color="#8b5cf6" />
+                {vertConnections.map((vc) => (
+                  <VCRow key={vc.id} vc={vc} floorCount={floorCount}
+                    onRemove={() => removeVC(vc.id)}
+                    onUpdate={patch => updateVC(vc.id, patch)}
+                    onFloorsChange={str => updateVCFloors(vc.id, str)}
+                  />
+                ))}
+                <PlaceButton
+                  active={scenarioMode === 'place-stairwell'} color="#8b5cf6" bg="rgba(139,92,246,.08)" border="rgba(139,92,246,.3)"
+                  label="Add Stairwell" activeLabel="Click grid to place…"
+                  onClick={() => setScenarioMode(scenarioMode === 'place-stairwell' ? null : 'place-stairwell')}
+                />
+                <button
+                  style={{ ...S.addBtn, marginTop: 3, borderColor: 'rgba(139,92,246,.18)', color: 'rgba(139,92,246,.5)', fontSize: 8 }}
+                  onClick={reDetectStairwells}
+                >↺ Auto-detect from grid</button>
+
+                <div style={S.divider} />
+
+                <SideHeader label="CELL PROPS" count={Object.keys(cellPropsMap).length} color={C.textDim} />
+                {Object.entries(cellPropsMap).map(([key, props]) => (
+                  <CellPropRow key={key} propKey={key} props={props}
+                    onRemove={() => removeCellProp(key)}
+                    onUpdate={patch => updateCellProp(key, patch)}
+                  />
+                ))}
+                <PlaceButton
+                  active={scenarioMode === 'place-cell-prop'} color={C.textDim} bg="rgba(255,255,255,.05)" border="rgba(255,255,255,.12)"
+                  label="Tag Cell" activeLabel="Click cell to tag…"
+                  onClick={() => setScenarioMode(scenarioMode === 'place-cell-prop' ? null : 'place-cell-prop')}
+                />
+              </div>
+            )}
+
+            {/* ── CONFIG tab ── */}
+            {sidebarTab === 'config' && (
+              <div style={S.tabPane}>
+
+                <SideHeader label="SIM CONFIG" color={C.accent} />
+                <div style={{ background: 'rgba(91,240,165,.03)', border: '1px solid rgba(91,240,165,.1)', borderRadius: 8, padding: '10px', marginBottom: 8 }}>
                   {[
-                    ['spread_probability', 'Spread prob', 0, 1, 0.05],
-                    ['stairwell_acceleration', 'Stair accel', 1, 5, 0.1],
-                    ['accelerant_bonus', 'Accel bonus', 0, 1, 0.05],
+                    ['max_turns',          'Max turns',       1,   500, 1   ],
+                    ['urgency_weight',     'Urgency weight',  0,   5,   0.1 ],
+                    ['contention_penalty', 'Contention pen.', 0,   2,   0.05],
                   ].map(([key, label, min, max, step]) => (
-                    <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint }}>{label}</span>
-                      <input type="number" min={min} max={max} step={step}
-                        value={threat.fire_params?.[key] ?? (key === 'stairwell_acceleration' ? 2.0 : key === 'accelerant_bonus' ? 0.3 : 0.4)}
-                        onChange={e => updateFireParam(key, e.target.value)}
-                        style={{ ...S.entityInput, width: 46, color: '#ff8844' }} />
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{label}</span>
+                      <input type="number" min={min} max={max} step={step} value={simConfig[key]}
+                        onChange={e => setSimConfig(prev => ({ ...prev, [key]: parseFloat(e.target.value) || 0 }))}
+                        style={{ ...S.entityInput, width: 54, color: C.accent }} />
                     </div>
                   ))}
-                  <button
-                    style={{ ...S.addBtn, marginTop: 6, borderColor: 'rgba(255,96,48,.3)', color: '#ff6030', background: scenarioMode === 'place-fire' ? 'rgba(255,96,48,.1)' : 'transparent', fontSize: 8 }}
-                    onClick={() => setScenarioMode(scenarioMode === 'place-fire' ? null : 'place-fire')}
-                  >
-                    {scenarioMode === 'place-fire' ? 'Click grid to reposition…' : '↺ Reposition origin'}
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>Elevator enabled</span>
+                    <input type="checkbox" checked={simConfig.elevator_enabled}
+                      onChange={e => setSimConfig(prev => ({ ...prev, elevator_enabled: e.target.checked }))}
+                      style={{ accentColor: C.accent, cursor: 'pointer', width: 14, height: 14 }} />
+                  </div>
                 </div>
-              ) : (
-                <button
-                  style={{ ...S.addBtn, borderColor: 'rgba(255,96,48,.25)', color: '#ff6030', background: scenarioMode === 'place-fire' ? 'rgba(255,96,48,.1)' : 'transparent' }}
-                  onClick={() => setScenarioMode(scenarioMode === 'place-fire' ? null : 'place-fire')}
-                >
-                  + {scenarioMode === 'place-fire' ? 'Click grid to place…' : 'Add Fire'}
-                </button>
-              )}
-            </div>
 
-            <div style={S.divider} />
+                <div style={S.divider} />
 
-            {/* Exit Nodes */}
-            <div style={S.sideSection}>
-              <div style={S.sideSectionHeader}>
-                <span style={{ ...S.sideLabel, color: '#22c55e' }}>🚪 EXIT NODES</span>
-                <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{exitNodes.length}</span>
-              </div>
-              {exitNodes.map((node) => (
-                <ExitNodeRow key={node.id} node={node} floorCount={floorCount}
-                  onRemove={() => removeExitNode(node.id)}
-                  onUpdate={patch => updateExitNode(node.id, patch)}
-                />
-              ))}
-              <button
-                style={{ ...S.addBtn, borderColor: 'rgba(34,197,94,.3)', color: '#22c55e', background: scenarioMode === 'place-exit' ? 'rgba(34,197,94,.1)' : 'transparent' }}
-                onClick={() => setScenarioMode(scenarioMode === 'place-exit' ? null : 'place-exit')}
-              >
-                + {scenarioMode === 'place-exit' ? 'Click grid to place…' : 'Add Exit Node'}
-              </button>
-            </div>
-
-            <div style={S.divider} />
-
-            {/* Vertical Connections */}
-            <div style={S.sideSection}>
-              <div style={S.sideSectionHeader}>
-                <span style={{ ...S.sideLabel, color: '#8b5cf6' }}>↕ VERTICAL CONN.</span>
-                <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{vertConnections.length}</span>
-              </div>
-              {vertConnections.map((vc) => (
-                <VCRow key={vc.id} vc={vc} floorCount={floorCount}
-                  onRemove={() => removeVC(vc.id)}
-                  onUpdate={patch => updateVC(vc.id, patch)}
-                  onFloorsChange={str => updateVCFloors(vc.id, str)}
-                />
-              ))}
-              <button
-                style={{ ...S.addBtn, borderColor: 'rgba(139,92,246,.3)', color: '#8b5cf6', background: scenarioMode === 'place-stairwell' ? 'rgba(139,92,246,.1)' : 'transparent' }}
-                onClick={() => setScenarioMode(scenarioMode === 'place-stairwell' ? null : 'place-stairwell')}
-              >
-                + {scenarioMode === 'place-stairwell' ? 'Click grid to place…' : 'Add Stairwell'}
-              </button>
-              <button
-                style={{ ...S.addBtn, marginTop: 3, borderColor: 'rgba(139,92,246,.2)', color: 'rgba(139,92,246,.6)', background: 'transparent', fontSize: 8 }}
-                onClick={reDetectStairwells}
-                title="Scan the current grid for stairwell cells and rebuild vertical connections"
-              >
-                ↺ Auto-detect from grid
-              </button>
-            </div>
-
-            <div style={S.divider} />
-
-            {/* Cell Properties */}
-            <div style={S.sideSection}>
-              <div style={S.sideSectionHeader}>
-                <span style={{ ...S.sideLabel, color: C.textDim }}>🏷 CELL PROPS</span>
-                <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{Object.keys(cellPropsMap).length}</span>
-              </div>
-              {Object.entries(cellPropsMap).map(([key, props]) => (
-                <CellPropRow key={key} propKey={key} props={props}
-                  onRemove={() => removeCellProp(key)}
-                  onUpdate={patch => updateCellProp(key, patch)}
-                />
-              ))}
-              <button
-                style={{ ...S.addBtn, borderColor: 'rgba(255,255,255,.12)', color: C.textDim, background: scenarioMode === 'place-cell-prop' ? 'rgba(255,255,255,.06)' : 'transparent' }}
-                onClick={() => setScenarioMode(scenarioMode === 'place-cell-prop' ? null : 'place-cell-prop')}
-              >
-                + {scenarioMode === 'place-cell-prop' ? 'Click cell to tag…' : 'Tag Cell'}
-              </button>
-            </div>
-
-            <div style={S.divider} />
-
-            {/* Simulation Config */}
-            <div style={S.sideSection}>
-              <div style={S.sideSectionHeader}>
-                <span style={{ ...S.sideLabel, color: C.accent }}>⚙ SIM CONFIG</span>
-              </div>
-              <div style={{ background: 'rgba(91,240,165,.03)', border: '1px solid rgba(91,240,165,.1)', borderRadius: 7, padding: '8px', marginBottom: 5 }}>
+                <SideHeader label="SUMMARY" color={C.textDim} />
                 {[
-                  ['max_turns',          'Max turns',        'number', 1,   500, 1  ],
-                  ['urgency_weight',     'Urgency weight',   'number', 0,   5,   0.1],
-                  ['contention_penalty', 'Contention pen.',  'number', 0,   2,   0.05],
-                ].map(([key, label, , min, max, step]) => (
-                  <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint }}>{label}</span>
-                    <input type="number" min={min} max={max} step={step}
-                      value={simConfig[key]}
-                      onChange={e => setSimConfig(prev => ({ ...prev, [key]: parseFloat(e.target.value) || 0 }))}
-                      style={{ ...S.entityInput, width: 50, color: C.accent }} />
+                  ['Responders', responders.length, C.blue],
+                  ['Victims',    victims.length,    C.amber],
+                  ['Immobile',   victims.filter(v => v.mobility === 'immobile').length, C.textDim],
+                  ['Exit nodes', exitNodes.length,  '#22c55e'],
+                  ['Stairwells', vertConnections.length, '#8b5cf6'],
+                  ['Cell props', Object.keys(cellPropsMap).length, C.textDim],
+                  ['Fire threat', threat ? 1 : 0,  '#ff6030'],
+                ].map(([label, val, color]) => (
+                  <div key={label} style={S.summaryRow}>
+                    <span style={S.summaryKey}>{label}</span>
+                    <span style={{ ...S.summaryVal, color: val > 0 ? color : C.textFaint }}>{val}</span>
                   </div>
                 ))}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                  <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint }}>Elevator</span>
-                  <input type="checkbox" checked={simConfig.elevator_enabled}
-                    onChange={e => setSimConfig(prev => ({ ...prev, elevator_enabled: e.target.checked }))}
-                    style={{ accentColor: C.accent, cursor: 'pointer' }} />
-                </div>
-              </div>
-            </div>
 
-            <div style={S.divider} />
+                <div style={S.divider} />
 
-            {/* Summary */}
-            <div style={{ padding: '8px 0' }}>
-              <div style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint, letterSpacing: '.5px', marginBottom: 8 }}>SCENARIO SUMMARY</div>
-              <div style={S.summaryRow}>
-                <span style={S.summaryKey}>Responders</span>
-                <span style={{ ...S.summaryVal, color: C.blue }}>{responders.length}</span>
+                {(responders.length > 0 || victims.length > 0 || threat || exitNodes.length > 0 || vertConnections.length > 0) && (
+                  <button
+                    style={{ ...S.addBtn, borderColor: C.redBdr, color: C.red, background: C.redBg, marginTop: 4 }}
+                    onClick={() => { setResponders([]); setVictims([]); setThreat(null); }}
+                  >✕ Clear scenario entities</button>
+                )}
               </div>
-              <div style={S.summaryRow}>
-                <span style={S.summaryKey}>Victims</span>
-                <span style={{ ...S.summaryVal, color: C.amber }}>{victims.length}</span>
-              </div>
-              <div style={S.summaryRow}>
-                <span style={S.summaryKey}>Immobile</span>
-                <span style={S.summaryVal}>{victims.filter(v => v.mobility === 'immobile').length}</span>
-              </div>
-              <div style={S.summaryRow}>
-                <span style={S.summaryKey}>Mobile</span>
-                <span style={S.summaryVal}>{victims.filter(v => v.mobility !== 'immobile').length}</span>
-              </div>
-              <div style={S.summaryRow}>
-                <span style={S.summaryKey}>Fire threat</span>
-                <span style={{ ...S.summaryVal, color: threat ? '#ff6030' : C.textFaint }}>{threat ? `(${threat.origin.x},${threat.origin.y}) fl${threat.origin.z}` : '—'}</span>
-              </div>
-            </div>
-
-            {(responders.length > 0 || victims.length > 0 || threat) && (
-              <button
-                style={{ ...S.addBtn, marginTop: 6, borderColor: C.redBdr, color: C.red, background: C.redBg }}
-                onClick={() => { setResponders([]); setVictims([]); setThreat(null); }}
-              >
-                ✕ Clear all
-              </button>
             )}
           </div>
         )}
       </div>
 
+    </div>
+  );
+}
+
+// ── Shared sidebar helpers ──────────────────────────────────────────────────
+
+function SideHeader({ label, count, color }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+      <span style={{ fontFamily: C.mono, fontSize: 7.5, letterSpacing: '1px', color: color ?? C.textFaint, textTransform: 'uppercase' }}>{label}</span>
+      {count !== undefined && (
+        <span style={{ fontFamily: C.mono, fontSize: 9, fontWeight: 700, color: count > 0 ? color : C.textFaint }}>{count}</span>
+      )}
+    </div>
+  );
+}
+
+function PlaceButton({ active, color, bg, border, label, activeLabel, onClick }) {
+  return (
+    <button
+      style={{ ...S.addBtn, borderColor: active ? border : border, color, background: active ? bg : 'transparent' }}
+      onClick={onClick}
+    >
+      {active ? `📍 ${activeLabel}` : `+ ${label}`}
+    </button>
+  );
+}
+
+function FireCard({ threat, floorCount, scenarioMode, onRemove, onOriginChange, onParamChange, onReposition }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div style={{ background: 'rgba(255,96,48,.05)', border: '1px solid rgba(255,96,48,.15)', borderRadius: 8, marginBottom: 6, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 9px', cursor: 'pointer' }} onClick={() => setOpen(v => !v)}>
+        <span style={{ fontFamily: C.mono, fontSize: 8, color: '#ff6030', fontWeight: 700, flex: 1 }}>
+          🔥 ({threat.origin.x},{threat.origin.y}) fl.{threat.origin.z}
+        </span>
+        <span style={{ fontFamily: C.mono, fontSize: 9, color: C.textFaint }}>{open ? '▾' : '▸'}</span>
+        <button onClick={e => { e.stopPropagation(); onRemove(); }}
+          style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
+      </div>
+      {open && (
+        <div style={{ padding: '0 9px 9px' }}>
+          <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 4 }}>ORIGIN</div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+            {[['x', threat.origin.x], ['y', threat.origin.y]].map(([f, v]) => (
+              <label key={f} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{f.toUpperCase()}</span>
+                <input type="number" min={0} value={v} onChange={e => onOriginChange(f, e.target.value)} style={S.entityInput} />
+              </label>
+            ))}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>FL</span>
+              <input type="number" min={0} max={Math.max(0, floorCount - 1)} value={threat.origin.z}
+                onChange={e => onOriginChange('z', e.target.value)} style={S.entityInput} />
+            </label>
+          </div>
+          <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 4 }}>PARAMS</div>
+          {[
+            ['spread_probability',     'Spread prob',  0, 1,   0.05],
+            ['stairwell_acceleration', 'Stair accel',  1, 5,   0.1 ],
+            ['accelerant_bonus',       'Accel bonus',  0, 1,   0.05],
+          ].map(([key, lbl, min, max, step]) => (
+            <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+              <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint }}>{lbl}</span>
+              <input type="number" min={min} max={max} step={step}
+                value={threat.fire_params?.[key] ?? (key === 'stairwell_acceleration' ? 2.0 : key === 'accelerant_bonus' ? 0.3 : 0.4)}
+                onChange={e => onParamChange(key, e.target.value)}
+                style={{ ...S.entityInput, width: 46, color: '#ff8844' }} />
+            </div>
+          ))}
+          <button
+            style={{ ...S.addBtn, marginTop: 4, borderColor: 'rgba(255,96,48,.3)', color: '#ff6030', background: scenarioMode === 'place-fire' ? 'rgba(255,96,48,.1)' : 'transparent', fontSize: 8 }}
+            onClick={onReposition}
+          >{scenarioMode === 'place-fire' ? 'Click grid to reposition…' : '↺ Reposition origin'}</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -952,89 +1001,57 @@ function LandingCard({ icon, tag, accent, title, desc, onClick }) {
   );
 }
 
-function PostBtn({ icon, label, desc, onClick, primary }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: 6, padding: '16px 12px',
-        border: `1px solid ${hov ? (primary ? C.accentBdr : C.borderHi) : (primary ? C.accentBdr : C.border)}`,
-        borderRadius: 10, cursor: 'pointer',
-        background: hov ? (primary ? C.accentBg : 'rgba(255,255,255,.04)') : (primary ? 'rgba(91,240,165,.04)' : 'rgba(255,255,255,.02)'),
-        transition: 'all .15s',
-      }}
-    >
-      <span style={{ fontSize: 22 }}>{icon}</span>
-      <span style={{ fontFamily: C.sans, fontWeight: 700, fontSize: 13, color: primary ? C.accent : C.text }}>{label}</span>
-      <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textDim, lineHeight: 1.5, textAlign: 'center' }}>{desc}</span>
-    </button>
-  );
-}
 
 function EntityRow({ entity, type, index, floorCount, onRemove, onFloorChange, onCoordChange, onLabelChange, onEquipmentChange, onMobilityChange }) {
+  const [open, setOpen] = useState(false);
   const accent = type === 'responder' ? C.blue : C.amber;
+  const summary = entity.label
+    ? `${entity.label} · (${entity.x},${entity.y}) fl.${entity.z}`
+    : `(${entity.x},${entity.y}) fl.${entity.z}`;
   return (
-    <div style={{
-      background: 'rgba(255,255,255,.02)', border: `1px solid rgba(255,255,255,.05)`,
-      borderRadius: 7, padding: '7px 8px', marginBottom: 5,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{ fontFamily: C.mono, fontSize: 9, color: accent, fontWeight: 700 }}>{entity.id}</span>
-        <button onClick={onRemove} style={{
-          background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4,
-          color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px',
-        }}>✕</button>
+    <div style={{ background: 'rgba(255,255,255,.02)', border: `1px solid rgba(255,255,255,.05)`, borderRadius: 8, marginBottom: 5, overflow: 'hidden' }}>
+      {/* Collapsed header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px', cursor: 'pointer' }} onClick={() => setOpen(v => !v)}>
+        <span style={{ fontFamily: C.mono, fontSize: 8, color: accent, fontWeight: 700, minWidth: 22 }}>{entity.id}</span>
+        <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary}</span>
+        <span style={{ fontFamily: C.mono, fontSize: 9, color: C.textFaint }}>{open ? '▾' : '▸'}</span>
+        <button onClick={e => { e.stopPropagation(); onRemove(); }}
+          style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
       </div>
-      {/* Label */}
-      <div style={{ marginBottom: 5 }}>
-        <input
-          type="text"
-          value={entity.label ?? ''}
-          placeholder="Label…"
-          onChange={e => onLabelChange?.(e.target.value)}
-          style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: accent, outline: 'none', boxSizing: 'border-box' }}
-        />
-      </div>
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        {[['x', entity.x], ['y', entity.y]].map(([field, val]) => (
-          <label key={field} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{field.toUpperCase()}</span>
-            <input type="number" min={0} value={val}
-              onChange={e => onCoordChange(field, e.target.value)}
-              style={S.entityInput} />
-          </label>
-        ))}
-        <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>FL</span>
-          <input type="number" min={0} max={Math.max(0, floorCount - 1)} value={entity.z}
-            onChange={e => onFloorChange(e.target.value)}
-            style={S.entityInput} />
-        </label>
-        {type === 'victim' && (
-          <select value={entity.mobility || 'immobile'}
-            onChange={e => onMobilityChange?.(e.target.value)}
-            style={S.mobilitySelect}>
-            <option value="immobile">immobile</option>
-            <option value="mobile">mobile</option>
-            <option value="injured">injured</option>
-          </select>
-        )}
-      </div>
-      {/* Equipment (responders only) */}
-      {type === 'responder' && (
-        <div style={{ marginTop: 5 }}>
-          <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 2 }}>EQUIPMENT (comma-sep)</div>
-          <input
-            type="text"
-            value={(entity.equipment ?? []).join(', ')}
-            placeholder="ax, medic_kit, ladder…"
-            onChange={e => onEquipmentChange?.(e.target.value)}
-            style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: C.blue, outline: 'none', boxSizing: 'border-box' }}
-          />
+      {/* Expanded fields */}
+      {open && (
+        <div style={{ padding: '0 8px 8px', borderTop: '1px solid rgba(255,255,255,.04)' }}>
+          <input type="text" value={entity.label ?? ''} placeholder="Label…"
+            onChange={e => onLabelChange?.(e.target.value)}
+            style={{ width: '100%', padding: '4px 6px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: accent, outline: 'none', boxSizing: 'border-box', marginTop: 7, marginBottom: 6 }} />
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: type === 'responder' ? 6 : 0 }}>
+            {[['x', entity.x], ['y', entity.y]].map(([field, val]) => (
+              <label key={field} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{field.toUpperCase()}</span>
+                <input type="number" min={0} value={val} onChange={e => onCoordChange(field, e.target.value)} style={S.entityInput} />
+              </label>
+            ))}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>FL</span>
+              <input type="number" min={0} max={Math.max(0, floorCount - 1)} value={entity.z}
+                onChange={e => onFloorChange(e.target.value)} style={S.entityInput} />
+            </label>
+            {type === 'victim' && (
+              <select value={entity.mobility || 'immobile'} onChange={e => onMobilityChange?.(e.target.value)} style={S.mobilitySelect}>
+                <option value="immobile">immobile</option>
+                <option value="mobile">mobile</option>
+                <option value="injured">injured</option>
+              </select>
+            )}
+          </div>
+          {type === 'responder' && (
+            <>
+              <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 2 }}>EQUIPMENT</div>
+              <input type="text" value={(entity.equipment ?? []).join(', ')} placeholder="ax, medic_kit, ladder…"
+                onChange={e => onEquipmentChange?.(e.target.value)}
+                style={{ width: '100%', padding: '4px 6px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: C.blue, outline: 'none', boxSizing: 'border-box' }} />
+            </>
+          )}
         </div>
       )}
     </div>
@@ -1043,95 +1060,112 @@ function EntityRow({ entity, type, index, floorCount, onRemove, onFloorChange, o
 
 // ── Exit Node row ───────────────────────────────────────────────────────────
 function ExitNodeRow({ node, floorCount, onRemove, onUpdate }) {
+  const [open, setOpen] = useState(false);
+  const summary = node.label ? `${node.label} · (${node.x},${node.y}) fl.${node.z ?? 0}` : `(${node.x},${node.y}) fl.${node.z ?? 0}`;
   return (
-    <div style={{ background: 'rgba(34,197,94,.03)', border: '1px solid rgba(34,197,94,.1)', borderRadius: 7, padding: '7px 8px', marginBottom: 5 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{ fontFamily: C.mono, fontSize: 9, color: '#22c55e', fontWeight: 700 }}>{node.id}</span>
-        <button onClick={onRemove} style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
+    <div style={{ background: 'rgba(34,197,94,.03)', border: '1px solid rgba(34,197,94,.12)', borderRadius: 8, marginBottom: 5, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px', cursor: 'pointer' }} onClick={() => setOpen(v => !v)}>
+        <span style={{ fontFamily: C.mono, fontSize: 7.5, color: '#22c55e', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary}</span>
+        <span style={{ fontFamily: C.mono, fontSize: 9, color: C.textFaint }}>{open ? '▾' : '▸'}</span>
+        <button onClick={e => { e.stopPropagation(); onRemove(); }} style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
       </div>
-      <input type="text" value={node.label ?? ''} placeholder="Label…"
-        onChange={e => onUpdate({ label: e.target.value })}
-        style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: '#22c55e', outline: 'none', boxSizing: 'border-box', marginBottom: 5 }} />
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-        {[['x', node.x], ['y', node.y]].map(([f, v]) => (
-          <label key={f} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{f.toUpperCase()}</span>
-            <input type="number" min={0} value={v} onChange={e => onUpdate({ [f]: Math.max(0, parseInt(e.target.value) || 0) })} style={S.entityInput} />
-          </label>
-        ))}
-        <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>FL</span>
-          <input type="number" min={0} max={Math.max(0, floorCount - 1)} value={node.z ?? 0} onChange={e => onUpdate({ z: Math.max(0, parseInt(e.target.value) || 0) })} style={S.entityInput} />
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>OPEN</span>
-          <input type="checkbox" checked={node.always_open ?? true} onChange={e => onUpdate({ always_open: e.target.checked })} style={{ accentColor: '#22c55e', cursor: 'pointer' }} />
-        </label>
-      </div>
+      {open && (
+        <div style={{ padding: '0 8px 8px', borderTop: '1px solid rgba(34,197,94,.08)' }}>
+          <input type="text" value={node.label ?? ''} placeholder="Label…" onChange={e => onUpdate({ label: e.target.value })}
+            style={{ width: '100%', padding: '4px 6px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: '#22c55e', outline: 'none', boxSizing: 'border-box', marginTop: 7, marginBottom: 6 }} />
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+            {[['x', node.x], ['y', node.y]].map(([f, v]) => (
+              <label key={f} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{f.toUpperCase()}</span>
+                <input type="number" min={0} value={v} onChange={e => onUpdate({ [f]: Math.max(0, parseInt(e.target.value)||0) })} style={S.entityInput} />
+              </label>
+            ))}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>FL</span>
+              <input type="number" min={0} max={Math.max(0, floorCount-1)} value={node.z ?? 0} onChange={e => onUpdate({ z: Math.max(0, parseInt(e.target.value)||0) })} style={S.entityInput} />
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>OPEN</span>
+              <input type="checkbox" checked={node.always_open ?? true} onChange={e => onUpdate({ always_open: e.target.checked })} style={{ accentColor: '#22c55e', cursor: 'pointer' }} />
+            </label>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Vertical Connection row ──────────────────────────────────────────────────
 function VCRow({ vc, floorCount, onRemove, onUpdate, onFloorsChange }) {
+  const [open, setOpen] = useState(false);
+  const floorStr = (vc.floors ?? []).join(',');
+  const summary = `${vc.label || vc.id} · (${vc.x},${vc.y}) fl.${floorStr}`;
   return (
-    <div style={{ background: 'rgba(139,92,246,.03)', border: '1px solid rgba(139,92,246,.1)', borderRadius: 7, padding: '7px 8px', marginBottom: 5 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{ fontFamily: C.mono, fontSize: 9, color: '#8b5cf6', fontWeight: 700 }}>{vc.id}</span>
-        <button onClick={onRemove} style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
+    <div style={{ background: 'rgba(139,92,246,.03)', border: '1px solid rgba(139,92,246,.12)', borderRadius: 8, marginBottom: 5, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px', cursor: 'pointer' }} onClick={() => setOpen(v => !v)}>
+        <span style={{ fontFamily: C.mono, fontSize: 7.5, color: '#8b5cf6', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary}</span>
+        <span style={{ fontFamily: C.mono, fontSize: 9, color: C.textFaint }}>{open ? '▾' : '▸'}</span>
+        <button onClick={e => { e.stopPropagation(); onRemove(); }} style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
       </div>
-      <input type="text" value={vc.label ?? ''} placeholder="Label…"
-        onChange={e => onUpdate({ label: e.target.value })}
-        style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: '#8b5cf6', outline: 'none', boxSizing: 'border-box', marginBottom: 5 }} />
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>TYPE</span>
-          <select value={vc.type ?? 'stairwell'} onChange={e => onUpdate({ type: e.target.value })}
-            style={{ ...S.mobilitySelect, color: '#8b5cf6' }}>
-            <option value="stairwell">stairwell</option>
-            <option value="elevator">elevator</option>
-          </select>
-        </label>
-        {[['x', vc.x], ['y', vc.y]].map(([f, v]) => (
-          <label key={f} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{f.toUpperCase()}</span>
-            <input type="number" min={0} value={v} onChange={e => onUpdate({ [f]: Math.max(0, parseInt(e.target.value) || 0) })} style={S.entityInput} />
-          </label>
-        ))}
-      </div>
-      <div style={{ marginBottom: 5 }}>
-        <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 2 }}>FLOORS (comma-sep)</div>
-        <input type="text" value={(vc.floors ?? []).join(', ')} placeholder="0, 1, 2"
-          onChange={e => onFloorsChange(e.target.value)}
-          style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: '#8b5cf6', outline: 'none', boxSizing: 'border-box' }} />
-      </div>
-      {[['traversal_cost','Traversal cost',1,20,1],['victim_carry_cost_multiplier','Carry mult.',0.5,5,0.5]].map(([k,lbl,mn,mx,st]) => (
-        <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-          <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint }}>{lbl}</span>
-          <input type="number" min={mn} max={mx} step={st} value={vc[k] ?? (k === 'traversal_cost' ? 3 : 2)}
-            onChange={e => onUpdate({ [k]: parseFloat(e.target.value) || mn })}
-            style={{ ...S.entityInput, width: 46, color: '#8b5cf6' }} />
+      {open && (
+        <div style={{ padding: '0 8px 8px', borderTop: '1px solid rgba(139,92,246,.08)' }}>
+          <input type="text" value={vc.label ?? ''} placeholder="Label…" onChange={e => onUpdate({ label: e.target.value })}
+            style={{ width: '100%', padding: '4px 6px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: '#8b5cf6', outline: 'none', boxSizing: 'border-box', marginTop: 7, marginBottom: 6 }} />
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>TYPE</span>
+              <select value={vc.type ?? 'stairwell'} onChange={e => onUpdate({ type: e.target.value })} style={{ ...S.mobilitySelect, color: '#8b5cf6' }}>
+                <option value="stairwell">stairwell</option>
+                <option value="elevator">elevator</option>
+              </select>
+            </label>
+            {[['x', vc.x], ['y', vc.y]].map(([f, v]) => (
+              <label key={f} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{f.toUpperCase()}</span>
+                <input type="number" min={0} value={v} onChange={e => onUpdate({ [f]: Math.max(0, parseInt(e.target.value)||0) })} style={S.entityInput} />
+              </label>
+            ))}
+          </div>
+          <div style={{ marginBottom: 6 }}>
+            <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 2 }}>FLOORS (e.g. 0, 1, 2)</div>
+            <input type="text" value={(vc.floors ?? []).join(', ')} placeholder="0, 1, 2" onChange={e => onFloorsChange(e.target.value)}
+              style={{ width: '100%', padding: '4px 6px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: '#8b5cf6', outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+          {[['traversal_cost','Traversal cost',1,20,1],['victim_carry_cost_multiplier','Carry mult.',0.5,5,0.5]].map(([k,lbl,mn,mx,st]) => (
+            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint }}>{lbl}</span>
+              <input type="number" min={mn} max={mx} step={st} value={vc[k] ?? (k==='traversal_cost'?3:2)}
+                onChange={e => onUpdate({ [k]: parseFloat(e.target.value)||mn })}
+                style={{ ...S.entityInput, width: 46, color: '#8b5cf6' }} />
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
 
 // ── Cell Property row ────────────────────────────────────────────────────────
 function CellPropRow({ propKey, props, onRemove, onUpdate }) {
+  const [open, setOpen] = useState(false);
+  const summary = props.label ? `${propKey} · ${props.label}` : propKey;
   return (
-    <div style={{ background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.05)', borderRadius: 7, padding: '7px 8px', marginBottom: 5 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textDim }}>{propKey}</span>
-        <button onClick={onRemove} style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
+    <div style={{ background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 8, marginBottom: 5, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 8px', cursor: 'pointer' }} onClick={() => setOpen(v => !v)}>
+        <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textDim, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{summary}</span>
+        <span style={{ fontFamily: C.mono, fontSize: 9, color: C.textFaint }}>{open ? '▾' : '▸'}</span>
+        <button onClick={e => { e.stopPropagation(); onRemove(); }} style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
       </div>
-      <input type="text" value={props.label ?? ''} placeholder="Label…"
-        onChange={e => onUpdate({ label: e.target.value })}
-        style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: C.text, outline: 'none', boxSizing: 'border-box', marginBottom: 5 }} />
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>LOCKED</span>
-        <input type="checkbox" checked={props.locked ?? false} onChange={e => onUpdate({ locked: e.target.checked })} style={{ accentColor: C.red, cursor: 'pointer' }} />
-      </label>
+      {open && (
+        <div style={{ padding: '0 8px 8px', borderTop: '1px solid rgba(255,255,255,.04)' }}>
+          <input type="text" value={props.label ?? ''} placeholder="Label…" onChange={e => onUpdate({ label: e.target.value })}
+            style={{ width: '100%', padding: '4px 6px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: C.text, outline: 'none', boxSizing: 'border-box', marginTop: 7, marginBottom: 6 }} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>LOCKED</span>
+            <input type="checkbox" checked={props.locked ?? false} onChange={e => onUpdate({ locked: e.target.checked })} style={{ accentColor: C.red, cursor: 'pointer' }} />
+          </label>
+        </div>
+      )}
     </div>
   );
 }
@@ -1286,14 +1320,25 @@ const S = {
 
   // ── Scenario sidebar ──
   sidebar: {
-    width: 220, flexShrink: 0, background: 'rgba(10,10,18,.95)',
+    width: 260, flexShrink: 0, background: 'rgba(10,10,18,.97)',
     borderLeft: '1px solid rgba(255,255,255,.06)',
-    padding: '12px', overflowY: 'auto',
-    display: 'flex', flexDirection: 'column',
+    display: 'flex', flexDirection: 'column', overflow: 'hidden',
   },
-  sidebarTitle: {
-    fontFamily: C.sans, fontWeight: 700, fontSize: 13, color: C.text,
-    letterSpacing: -.2, marginBottom: 12,
+  sideTabBar: {
+    display: 'flex', flexShrink: 0,
+    borderBottom: '1px solid rgba(255,255,255,.06)',
+  },
+  sideTab: {
+    flex: 1, padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+    fontFamily: C.mono, fontSize: 7, letterSpacing: '.5px', color: C.textFaint,
+    background: 'transparent', border: 'none', borderBottom: '2px solid transparent',
+    cursor: 'pointer', transition: 'all .15s',
+  },
+  sideTabActive: {
+    color: C.text, borderBottomColor: C.accent, background: 'rgba(255,255,255,.03)',
+  },
+  tabPane: {
+    flex: 1, overflowY: 'auto', padding: '12px 10px',
   },
   sideSection: { marginBottom: 2 },
   sideSectionHeader: {
