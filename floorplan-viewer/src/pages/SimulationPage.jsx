@@ -206,6 +206,9 @@ export default function SimulationPage({ onBack, onNavigate, initialJson, onJson
   const [simFloor, setSimFloor] = useState(0);
   const fileRef = useRef();
 
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+
   const loadFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -243,7 +246,9 @@ export default function SimulationPage({ onBack, onNavigate, initialJson, onJson
           },
         },
       };
-      const res = await fetch('/api/simulate', {
+
+      //fetch(`api/simulate)
+      const res = await fetch(`${API_URL}/api/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
