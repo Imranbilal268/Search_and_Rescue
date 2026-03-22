@@ -252,6 +252,8 @@ export default function SimulationPage({ onBack, onNavigate, initialJson, onJson
   const [llmLoading, setLlmLoading] = useState(false);
   const fileRef = useRef();
 
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
   // Auto-play effect
   useEffect(() => {
     if (!isPlaying || !simData) return;
