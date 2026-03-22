@@ -209,7 +209,7 @@ canvas{display:block}
     <button class="dim-btn active" data-dim="3d" onclick="setDim('3d')">3D</button>
     <button class="dim-btn" data-dim="2d" onclick="setDim('2d')">2D PLAN</button>
   </div>
-  <div class="plan-info" id="planInfo">Layer Y<span id="pi-y">0</span> · <span id="pi-m">0.00m</span> · LMB tool action · RMB erase/cancel · MMB pan · Esc cancel · [/] layers</div>
+  <div class="plan-info" id="planInfo">Layer Y<span id="pi-y">0</span> · <span id="pi-m">0.00m</span> · WASD pan · LMB tool · RMB erase · Scroll zoom · [/] layers</div>
 
   <!-- TOP-LEFT: Title -->
   <div class="top-left"><h1>Block Builder</h1><span class="subtitle">Fire &amp; Structure Sim</span></div>
@@ -284,18 +284,18 @@ canvas{display:block}
         <button class="vm-btn" data-vm="thermal" onclick="setView('thermal')"><span class="vdot" style="background:#f72"></span>Thermal</button>
         <div class="sec-label">Camera</div>
         <div class="cam-grid">
-          <button class="cam-btn" onclick="camOrbit(-.3,0)" title="Rotate left">◀</button>
-          <button class="cam-btn" onclick="camPan(0,-1)" title="Pan forward">▲</button>
-          <button class="cam-btn" onclick="camOrbit(.3,0)" title="Rotate right">▶</button>
-          <button class="cam-btn" onclick="camPan(-1,0)" title="Pan left">◁</button>
-          <button class="cam-btn" onclick="camPan(0,1)" title="Pan back">▼</button>
-          <button class="cam-btn" onclick="camPan(1,0)" title="Pan right">▷</button>
-          <button class="cam-btn" onclick="camOrbit(0,.15)" title="Tilt up">↑</button>
-          <button class="cam-btn accent" onclick="camReset()" title="Reset camera">R</button>
-          <button class="cam-btn" onclick="camOrbit(0,-.15)" title="Tilt down">↓</button>
-          <button class="cam-btn" onclick="camZoom(-3)" title="Zoom in">+</button>
-          <button class="cam-btn accent" onclick="camFocus()" title="Focus on building">F</button>
-          <button class="cam-btn" onclick="camZoom(3)" title="Zoom out">−</button>
+          <button class="cam-btn" onclick="camOrbit(-.3,0)" title="Orbit left (Q)">⟲</button>
+          <button class="cam-btn" onclick="camPan(0,1)" title="Pan forward (W)">▲</button>
+          <button class="cam-btn" onclick="camOrbit(.3,0)" title="Orbit right (E)">⟳</button>
+          <button class="cam-btn" onclick="camPan(-1,0)" title="Pan left (A)">◀</button>
+          <button class="cam-btn" onclick="camPan(0,-1)" title="Pan backward (S)">▼</button>
+          <button class="cam-btn" onclick="camPan(1,0)" title="Pan right (D)">▶</button>
+          <button class="cam-btn" onclick="camOrbit(0,.15)" title="Tilt down">↓</button>
+          <button class="cam-btn accent" onclick="camReset()" title="Reset camera (R)">R</button>
+          <button class="cam-btn" onclick="camOrbit(0,-.15)" title="Tilt up">↑</button>
+          <button class="cam-btn" onclick="camZoom(-3)" title="Zoom in (+)">+</button>
+          <button class="cam-btn accent" onclick="camFocus()" title="Focus on building (F)">F</button>
+          <button class="cam-btn" onclick="camZoom(3)" title="Zoom out (−)">−</button>
         </div>
         <div class="sec-label">Preset Angles</div>
         <div class="angle-row">
@@ -383,7 +383,7 @@ canvas{display:block}
   </div>
 
   <!-- BOTTOM: Materials toolbar + hint -->
-  <div class="hint">WASD move · Scroll zoom · [/] layers · X mode · P pause · M materials · I solo · U cut · Tab 2D/3D</div>
+  <div class="hint">WASD pan · QE orbit · ZC up/down · Scroll zoom · [/] layers · X mode · P pause · M materials · Tab 2D/3D</div>
   <div id="toolbarWrap" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;z-index:15">
     <button id="toolbarToggle" onclick="toggleToolbar()" style="pointer-events:all;width:28px;height:16px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(10,10,18,.85);color:rgba(255,255,255,.3);cursor:pointer;font-size:8px;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0" title="Toggle materials (M)">&#x25BC;</button>
     <div class="toolbar" id="toolbar" style="pointer-events:all"></div>
@@ -1788,11 +1788,12 @@ function smoothCam(){
 function camOrbit(dTh,dPh){cThTarget+=dTh;cPhTarget=Math.max(.05,Math.min(Math.PI/2-.05,cPhTarget+dPh));}
 function camZoom(d){cDTarget=Math.max(3,Math.min(200,cDTarget+d));}
 function camPan(dx,dz){
-  const fw=new THREE.Vector3(-Math.sin(cTh),0,-Math.cos(cTh)); // forward on XZ plane
-  const rt=new THREE.Vector3(-Math.cos(cTh),0,Math.sin(cTh));  // right on XZ plane
+  // Same camera-perspective math as WASD: forward=(-cos(cTh),-sin(cTh)), right=(sin(cTh),-cos(cTh))
   const speed=cDTarget*.08;
-  cTgtTarget.add(rt.multiplyScalar(dx*speed));
-  cTgtTarget.add(fw.multiplyScalar(dz*speed));
+  const fX=-Math.cos(cTh), fZ=-Math.sin(cTh);
+  const rX=Math.sin(cTh), rZ=-Math.cos(cTh);
+  cTgtTarget.x+=rX*dx*speed+fX*dz*speed;
+  cTgtTarget.z+=rZ*dx*speed+fZ*dz*speed;
 }
 function camReset(){
   cThTarget=Math.PI/4;cPhTarget=Math.PI/4.5;cDTarget=55;
@@ -1937,46 +1938,42 @@ window.addEventListener('visibilitychange',()=>{if(document.hidden)resetInputSta
 document.addEventListener('mouseleave',()=>{orbiting=false;panning=false;paint2=false;erase2=false;pan2Drag=false;});
 
 function processKeys(){
-  // Don't process movement keys if a UI element is focused
   const ae=document.activeElement;
   if(ae&&ae.tagName!=='BODY'&&ae.tagName!=='CANVAS'&&ae!==document.documentElement) return;
-  // 3D camera controls
+
   if(dimMode==='3d'){
-    const speed=cD*.015;
-    if(keysDown.has('w')||keysDown.has('arrowup')){
-      const fw=new THREE.Vector3(-Math.sin(cTh),0,-Math.cos(cTh));
-      cTgtTarget.add(fw.multiplyScalar(speed));
-    }
-    if(keysDown.has('s')||keysDown.has('arrowdown')){
-      const fw=new THREE.Vector3(-Math.sin(cTh),0,-Math.cos(cTh));
-      cTgtTarget.add(fw.multiplyScalar(-speed));
-    }
-    if(keysDown.has('a')||keysDown.has('arrowleft')){
-      if(keysDown.has('shift')){
-        const rt=new THREE.Vector3(-Math.cos(cTh),0,Math.sin(cTh));
-        cTgtTarget.add(rt.multiplyScalar(-speed));
-      }else{
-        cThTarget-=.03;
-      }
-    }
-    if(keysDown.has('d')||keysDown.has('arrowright')){
-      if(keysDown.has('shift')){
-        const rt=new THREE.Vector3(-Math.cos(cTh),0,Math.sin(cTh));
-        cTgtTarget.add(rt.multiplyScalar(speed));
-      }else{
-        cThTarget+=.03;
-      }
-    }
-    if(keysDown.has('q')) cPhTarget=Math.max(.05,cPhTarget-.02);
-    if(keysDown.has('e')) cPhTarget=Math.min(Math.PI/2-.05,cPhTarget+.02);
-    if(keysDown.has('=')||keysDown.has('+')) cDTarget=Math.max(3,cDTarget*.98);
-    if(keysDown.has('-')||keysDown.has('_')) cDTarget=Math.min(200,cDTarget*1.02);
-    if(keysDown.has(' ')){cTgtTarget.y+=speed*.5;}
-    if(keysDown.has('c')){cTgtTarget.y-=speed*.5;}
+    const panSpeed=cD*.012;
+    const orbitSpeed=0.025;
+
+    // Camera offset from target (from updCam): x=sin(cPh)*cos(cTh), z=sin(cPh)*sin(cTh)
+    // Forward (into screen) = negative of that offset projected onto XZ, normalized
+    // Simplifies to: fwd = (-cos(cTh), -sin(cTh))
+    const fX=-Math.cos(cTh), fZ=-Math.sin(cTh); // forward
+    const rX=Math.sin(cTh), rZ=-Math.cos(cTh);   // right (90° CW from forward)
+
+    // W=forward (into screen), S=backward, A=left, D=right
+    if(keysDown.has('w')||keysDown.has('arrowup')){cTgtTarget.x+=fX*panSpeed;cTgtTarget.z+=fZ*panSpeed;}
+    if(keysDown.has('s')||keysDown.has('arrowdown')){cTgtTarget.x-=fX*panSpeed;cTgtTarget.z-=fZ*panSpeed;}
+    if(keysDown.has('a')||keysDown.has('arrowleft')){cTgtTarget.x-=rX*panSpeed;cTgtTarget.z-=rZ*panSpeed;}
+    if(keysDown.has('d')||keysDown.has('arrowright')){cTgtTarget.x+=rX*panSpeed;cTgtTarget.z+=rZ*panSpeed;}
+
+    // QE = orbit
+    if(keysDown.has('q')) cThTarget-=orbitSpeed;
+    if(keysDown.has('e')) cThTarget+=orbitSpeed;
+
+    // ZC / Space = vertical
+    if(keysDown.has('z')||keysDown.has(' ')) cTgtTarget.y+=panSpeed*.4;
+    if(keysDown.has('c')) cTgtTarget.y-=panSpeed*.4;
+
+    // +/- = zoom
+    if(keysDown.has('=')||keysDown.has('+')) cDTarget=Math.max(3,cDTarget*0.985);
+    if(keysDown.has('-')||keysDown.has('_')) cDTarget=Math.min(200,cDTarget*1.015);
   }
-  // 2D pan/zoom with keyboard
+
   if(dimMode==='2d'){
-    const sp=4;let moved=false;
+    // W=up on screen, S=down, A=left, D=right — matches screen direction
+    const sp=Math.max(2,200/zoom2);
+    let moved=false;
     if(keysDown.has('w')||keysDown.has('arrowup')){panY+=sp;moved=true;}
     if(keysDown.has('s')||keysDown.has('arrowdown')){panY-=sp;moved=true;}
     if(keysDown.has('a')||keysDown.has('arrowleft')){panX+=sp;moved=true;}
