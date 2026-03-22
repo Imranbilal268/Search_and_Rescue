@@ -1,18 +1,14 @@
 {
-  "building": {
-    "meta": {
-      "schema_version": "1.0",
-      "name": "Basic 2-Story House",
-      "floors": 2,
-      "width": 22,
-      "height": 18
-    },
-    "floor_labels": {
-      "0": "Ground Floor",
-      "1": "First Floor"
-    },
-    "grid": [
-      [
+    "$schema": "rescuegrid-v1",
+    "building": {
+      "meta": {
+        "schema_version": "1.0",
+        "name": "Basic 2-Story House",
+        "floors": 2,
+        "width": 16,
+        "height": 12
+      },
+      "grid": [
         [
           ["wall",  "wall",  "window",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall"  ],
           ["wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
