@@ -716,6 +716,8 @@ function setXrayOpacity(v){
 }
 function setSkyColor(hex){
   customSkyColor=hex;
+  localStorage.setItem('rescuegrid_skyColor',hex);
+  if(!_colorBcast)_colorCh.postMessage({type:'sky',hex});
   document.getElementById('skyColor').value=hex;
   document.getElementById('skyLabel').textContent=hex;
   const c=parseInt(hex.slice(1),16);
@@ -724,6 +726,8 @@ function setSkyColor(hex){
 }
 function setGroundColor(hex){
   groundColor=parseInt(hex.slice(1),16);
+  localStorage.setItem('rescuegrid_groundColor',hex);
+  if(!_colorBcast)_colorCh.postMessage({type:'ground',hex});
   const r=(groundColor>>16)&0xff,g=(groundColor>>8)&0xff,b=groundColor&0xff;
   gridLineColor=((Math.min(255,r+30))<<16)|((Math.min(255,g+30))<<8)|Math.min(255,b+30);
   gridSubColor=((Math.min(255,r+15))<<16)|((Math.min(255,g+15))<<8)|Math.min(255,b+15);
@@ -1503,6 +1507,40 @@ function downloadExport(){
   document.getElementById('exportInfo').textContent='Downloaded!';
 }
 
+// Flood-fill exterior 'empty' cells from the bounding-box perimeter.
+// Any 'empty' cell NOT reachable from the outside is enclosed → converted to 'floor'.
+// This prevents external hanging slabs from producing 'floor' clones on every floor.
+function fillInteriorEmpty(floorGrid, cols, rows) {
+  const g = floorGrid.map(r => r.slice());
+  const vis = [];
+  for(let r=0;r<rows;r++) vis.push(new Uint8Array(cols));
+  const q = [];
+  // Seed BFS from every perimeter cell that is currently 'empty'
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if((r===0||r===rows-1||c===0||c===cols-1)&&g[r][c]==='empty'){
+        vis[r][c]=1; q.push([r,c]);
+      }
+    }
+  }
+  // BFS — only traverse through 'empty' cells
+  const dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+  for(let i=0;i<q.length;i++){
+    const[r,c]=q[i];
+    for(const[dr,dc]of dirs){
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&!vis[nr][nc]&&g[nr][nc]==='empty'){
+        vis[nr][nc]=1; q.push([nr,nc]);
+      }
+    }
+  }
+  // Enclosed empty cells → floor (legitimate interior open space)
+  for(let r=0;r<rows;r++)
+    for(let c=0;c<cols;c++)
+      if(g[r][c]==='empty'&&!vis[r][c]) g[r][c]='floor';
+  return g;
+}
+
 function generateExportJSON(){
   if(placed.size===0) return {building:{meta:{schema_version:'1.0',name:'Empty',floors:0,width:0,height:0},floor_labels:{},grid:[],room_labels:{},cell_properties:{},vertical_connections:[],exit_nodes:[]}};
 
@@ -1577,12 +1615,14 @@ function generateExportJSON(){
         else if(hasWindow) cellType='window';
         else if(hasWall) cellType='wall';
         else if(hasBlock) cellType='floor';
-        else cellType='floor'; // empty cells become floor (open space)
+        else cellType='empty'; // no block — exterior by default; fillInteriorEmpty will convert enclosed ones to floor
         row.push(cellType);
       }
       floorGrid.push(row);
     }
-    grid.push(floorGrid);
+    // Convert enclosed empty cells (interior open space) to floor.
+    // Exterior empty cells caused by hanging slabs outside the building stay 'empty'.
+    grid.push(fillInteriorEmpty(floorGrid, cols, rows));
   }
 
   // Export room labels
@@ -1899,7 +1939,7 @@ function addRoomLabel(x,y,z,text){
 
 // ===== RAYCASTING =====
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
-function getGridPos(){ray.setFromCamera(mouse,camera);const meshes=[];placed.forEach(e=>meshes.push(e.mesh));const hits=ray.intersectObjects(meshes);if(hits.length>0){let fE=null;for(const[,e]of placed)if(e.mesh===hits[0].object){fE=e;break;}if(!fE)return null;if(mode==='erase')return{erase:true,gx:fE.gx,gy:fE.gy,gz:fE.gz};const n=hits[0].face.normal;return{erase:false,gx:fE.gx+Math.round(n.x),gy:fE.gy+Math.round(n.y),gz:fE.gz+Math.round(n.z)};}if(Math.abs(ray.ray.direction.y)<.001)return null;const t2=(currentLayer-ray.ray.origin.y)/ray.ray.direction.y;if(t2<0)return null;const pt=ray.ray.origin.clone().add(ray.ray.direction.clone().multiplyScalar(t2));const h=GRID/2,gx=Math.floor(pt.x+.5),gz=Math.floor(pt.z+.5);if(gx<-h||gx>=h||gz<-h||gz>=h)return null;return{erase:false,gx,gy:currentLayer,gz};}
+function getGridPos(){ray.setFromCamera(mouse,camera);const meshes=[];placed.forEach(e=>{if(e.mesh.visible)meshes.push(e.mesh);});const hits=ray.intersectObjects(meshes);if(hits.length>0){let fE=null;for(const[,e]of placed)if(e.mesh===hits[0].object){fE=e;break;}if(!fE)return null;if(mode==='erase')return{erase:true,gx:fE.gx,gy:fE.gy,gz:fE.gz};const n=hits[0].face.normal;const tgy=fE.gy+Math.round(n.y);if(isolateMode==='solo'&&tgy!==currentLayer)return null;if(isolateMode==='above'&&tgy>currentLayer)return null;return{erase:false,gx:fE.gx+Math.round(n.x),gy:tgy,gz:fE.gz+Math.round(n.z)};}if(Math.abs(ray.ray.direction.y)<.001)return null;const t2=(currentLayer-ray.ray.origin.y)/ray.ray.direction.y;if(t2<0)return null;const pt=ray.ray.origin.clone().add(ray.ray.direction.clone().multiplyScalar(t2));const h=GRID/2,gx=Math.floor(pt.x+.5),gz=Math.floor(pt.z+.5);if(gx<-h||gx>=h||gz<-h||gz>=h)return null;return{erase:false,gx,gy:currentLayer,gz};}
 const ghostGeo=new THREE.BoxGeometry(.9,.9,.9);const ghostMat=new THREE.MeshBasicMaterial({color:0x5bf0a5,transparent:true,opacity:.18,depthWrite:false});const ghost=new THREE.Mesh(ghostGeo,ghostMat);ghost.visible=false;scene.add(ghost);ghost.add(new THREE.LineSegments(new THREE.EdgesGeometry(ghostGeo),new THREE.LineBasicMaterial({color:0x5bf0a5,transparent:true,opacity:.45})));
 
 // ===== CAMERA (smooth orbit + pan + zoom) =====
@@ -3580,6 +3620,11 @@ function togglePhysics(){
   el.querySelector('.pb-lbl').textContent=physicsPaused?'Physics paused':'Physics running';
 }
 function animate(){requestAnimationFrame(animate);const now=performance.now(),dt=Math.min((now-lastT)/1000,.1);lastT=now;if(!physicsPaused){fTmr+=dt;if(fTmr>=FT){fTmr-=FT;tickFire();procCol();updateStats();if(dimMode==='2d')draw2d();}updFireVis(dt);updateP(dt);updFall(dt);}processKeys();smoothCam();if(simData)tickAgentLerp();if(dimMode==='3d'){const pos=getGridPos();if(pos&&mode==='place'&&!pos.erase&&!orbiting&&!panning){ghost.visible=true;ghost.position.set(pos.gx,pos.gy+.45,pos.gz);ghostMat.color.setHex(BLOCKS[selectedBlock].isFire?0xff6600:BLOCKS[selectedBlock].color);}else ghost.visible=false;renderer.render(scene,camera);}}
+// ── Sync sky/ground colors across viewers via localStorage + BroadcastChannel ──
+const _colorCh=new BroadcastChannel('rescuegrid_colors');
+let _colorBcast=false;
+_colorCh.onmessage=e=>{_colorBcast=true;if(e.data.type==='sky')setSkyColor(e.data.hex);if(e.data.type==='ground')setGroundColor(e.data.hex);_colorBcast=false;};
+(function(){const sk=localStorage.getItem('rescuegrid_skyColor');if(sk)setSkyColor(sk);const gc=localStorage.getItem('rescuegrid_groundColor');if(gc)setGroundColor(gc);})();
 animate();
 
 // ── Floor Plan Editor handoff — auto-import JSON if passed via localStorage ──

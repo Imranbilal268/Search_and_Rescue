@@ -205,6 +205,8 @@ body.sim-mode #simBar{pointer-events:all}
 /* Minimal camera-hint overlay */
 #simCamHint{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,.18);pointer-events:none;white-space:nowrap;letter-spacing:.4px;display:none}
 body.sim-mode #simCamHint{display:block}
+.sim-layer-row{display:none}
+body.sim-mode .sim-layer-row{display:flex}
 
 /* ===== SCENARIO EDITOR MODE (embedded in React scenario builder) ===== */
 /* Hide building construction UI — keep ctrl-panel (Layers/View tabs) visible */
@@ -218,8 +220,8 @@ body.scenario-editor .ctrl-tab[data-tab="build"],
 body.scenario-editor .ctrl-section[data-tab="build"]{display:none!important}
 body.scenario-editor #ui{pointer-events:none}
 body.scenario-editor .ctrl-panel,
-body.scenario-editor #scenarioPlacementHint,
-body.scenario-editor #simBar{pointer-events:all}
+body.scenario-editor #scenarioPlacementHint{pointer-events:all}
+body.scenario-editor #simBar{display:none!important}
 /* Placement hint bar */
 #scenarioPlacementHint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(91,240,165,.8);pointer-events:none;white-space:nowrap;z-index:20;background:rgba(10,10,18,.88);padding:8px 18px;border-radius:10px;border:1px solid rgba(91,240,165,.25);letter-spacing:.5px}
 body.scenario-editor #scenarioPlacementHint{pointer-events:none}
@@ -439,6 +441,38 @@ body.scenario-editor #scenarioPlacementHint{pointer-events:none}
       </div>
       <div class="sim-status" id="simStatusLbl">—</div>
     </div>
+    <div class="sim-row sim-layer-row" style="border-top:1px solid rgba(255,255,255,.06);padding-top:6px;margin-top:2px;gap:4px;flex-wrap:wrap">
+      <div class="ly-nav" style="flex:1;min-width:120px;margin-bottom:0">
+        <button class="ly-nav-btn" onclick="layerStep(-1)" title="Layer down">▼</button>
+        <div class="ly-nav-display">
+          <span class="ly-nav-y" id="simLyNavY">Y0</span>
+          <span class="ly-nav-m" id="simLyNavM">0.00m</span>
+        </div>
+        <button class="ly-nav-btn" onclick="layerStep(1)" title="Layer up">▲</button>
+      </div>
+      <div class="ly-iso-row" style="margin-bottom:0;flex-shrink:0">
+        <button class="ly-iso-btn" id="simLyIsoBtn" onclick="toggleIsolate()">Solo</button>
+        <button class="ly-iso-btn" id="simLyAboveBtn" onclick="toggleAbove()">Cut ↑</button>
+        <button class="ly-iso-btn accent" onclick="resetVisibility()">Show all</button>
+      </div>
+    </div>
+    <div class="sim-row sim-layer-row" style="padding:2px 0 0;min-height:8px">
+      <div class="ly-floors" id="simLyFloors" style="display:flex;flex-wrap:wrap;gap:3px;width:100%"></div>
+    </div>
+    <div class="sim-row sim-layer-row" style="border-top:1px solid rgba(255,255,255,.06);padding-top:6px;margin-top:2px;gap:3px;flex-wrap:wrap">
+      <button class="vm-btn" data-vm="standard" onclick="setView('standard')" style="width:auto;flex:1;padding:5px 4px;font-size:7.5px;margin-bottom:0"><span class="vdot" style="background:#aab"></span>Std</button>
+      <button class="vm-btn" data-vm="wireframe" onclick="setView('wireframe')" style="width:auto;flex:1;padding:5px 4px;font-size:7.5px;margin-bottom:0"><span class="vdot" style="background:#6cf"></span>Wire</button>
+      <button class="vm-btn" data-vm="xray" onclick="setView('xray')" style="width:auto;flex:1;padding:5px 4px;font-size:7.5px;margin-bottom:0"><span class="vdot" style="background:#8ef"></span>X-Ray</button>
+      <button class="vm-btn" data-vm="blueprint" onclick="setView('blueprint')" style="width:auto;flex:1;padding:5px 4px;font-size:7.5px;margin-bottom:0"><span class="vdot" style="background:#46a"></span>Plan</button>
+      <button class="vm-btn" data-vm="thermal" onclick="setView('thermal')" style="width:auto;flex:1;padding:5px 4px;font-size:7.5px;margin-bottom:0"><span class="vdot" style="background:#f72"></span>Therm</button>
+    </div>
+    <div id="simXraySliderWrap" style="display:none;width:100%;padding:4px 0 2px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,.2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px">X-Ray Opacity</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span id="simXrayVal" style="font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(255,255,255,.4)">22%</span>
+        <input type="range" class="ly-slider" min="5" max="95" value="22" oninput="setXrayOpacity(this.value)" style="flex:1">
+      </div>
+    </div>
   </div>
 
   <!-- BOTTOM: Materials toolbar + hint -->
@@ -625,11 +659,14 @@ let xrayOpacity=0.22;
 function setXrayOpacity(v){
   xrayOpacity=parseInt(v)/100;
   document.getElementById('xrayVal').textContent=v+'%';
+  const sxv=document.getElementById('simXrayVal');if(sxv)sxv.textContent=v+'%';
   if(viewMode==='xray'){applyViewAll();}
 }
 let customSkyColor=null;
 function setSkyColor(hex){
   customSkyColor=hex;
+  localStorage.setItem('rescuegrid_skyColor',hex);
+  if(!_colorBcast)_colorCh.postMessage({type:'sky',hex});
   document.getElementById('skyColor').value=hex;
   document.getElementById('skyLabel').textContent=hex;
   const c=parseInt(hex.slice(1),16);
@@ -638,6 +675,8 @@ function setSkyColor(hex){
 }
 function setGroundColor(hex){
   groundColor=parseInt(hex.slice(1),16);
+  localStorage.setItem('rescuegrid_groundColor',hex);
+  if(!_colorBcast)_colorCh.postMessage({type:'ground',hex});
   const r=(groundColor>>16)&0xff, g=(groundColor>>8)&0xff, b=groundColor&0xff;
   gridLineColor=((Math.min(255,r+30))<<16)|((Math.min(255,g+30))<<8)|Math.min(255,b+30);
   gridSubColor=((Math.min(255,r+15))<<16)|((Math.min(255,g+15))<<8)|Math.min(255,b+15);
@@ -645,7 +684,7 @@ function setGroundColor(hex){
   document.getElementById('groundLabel').textContent=hex;
   buildGrid();
 }
-function setView(vm){viewMode=vm;customSkyColor=null;document.querySelectorAll('.vm-btn').forEach(b=>b.classList.toggle('active',b.dataset.vm===vm));document.getElementById('xraySliderWrap').style.display=vm==='xray'?'block':'none';applyViewAll();}
+function setView(vm){viewMode=vm;customSkyColor=localStorage.getItem('rescuegrid_skyColor')||null;document.querySelectorAll('.vm-btn').forEach(b=>b.classList.toggle('active',b.dataset.vm===vm));document.getElementById('xraySliderWrap').style.display=vm==='xray'?'block':'none';const sxw=document.getElementById('simXraySliderWrap');if(sxw)sxw.style.display=vm==='xray'?'block':'none';applyViewAll();}
 function applyViewAll(){
   switch(viewMode){
     case'standard':scene.fog=new THREE.FogExp2(0x0a0a0f,.006);scene.background.setHex(0x0a0a0f);ambL.color.setHex(0x334466);ambL.intensity=.5;dirL.intensity=1.2;dirL.color.setHex(0xffeedd);filL.intensity=.3;filL.color.setHex(0x5577cc);hemL.intensity=.4;break;
@@ -1684,7 +1723,7 @@ function addRoomLabel(x,y,z,text){
 
 // ===== RAYCASTING =====
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
-function getGridPos(){ray.setFromCamera(mouse,camera);const meshes=[];placed.forEach(e=>meshes.push(e.mesh));const hits=ray.intersectObjects(meshes);if(hits.length>0){let fE=null;for(const[,e]of placed)if(e.mesh===hits[0].object){fE=e;break;}if(!fE)return null;if(mode==='erase')return{erase:true,gx:fE.gx,gy:fE.gy,gz:fE.gz};const n=hits[0].face.normal;return{erase:false,gx:fE.gx+Math.round(n.x),gy:fE.gy+Math.round(n.y),gz:fE.gz+Math.round(n.z)};}if(Math.abs(ray.ray.direction.y)<.001)return null;const t2=(currentLayer-ray.ray.origin.y)/ray.ray.direction.y;if(t2<0)return null;const pt=ray.ray.origin.clone().add(ray.ray.direction.clone().multiplyScalar(t2));const h=GRID/2,gx=Math.floor(pt.x+.5),gz=Math.floor(pt.z+.5);if(gx<-h||gx>=h||gz<-h||gz>=h)return null;return{erase:false,gx,gy:currentLayer,gz};}
+function getGridPos(){ray.setFromCamera(mouse,camera);const meshes=[];placed.forEach(e=>{if(e.mesh.visible)meshes.push(e.mesh);});const hits=ray.intersectObjects(meshes);if(hits.length>0){let fE=null;for(const[,e]of placed)if(e.mesh===hits[0].object){fE=e;break;}if(!fE)return null;if(mode==='erase')return{erase:true,gx:fE.gx,gy:fE.gy,gz:fE.gz};const n=hits[0].face.normal;const tgy=fE.gy+Math.round(n.y);if(isolateMode==='solo'&&tgy!==currentLayer)return null;if(isolateMode==='above'&&tgy>currentLayer)return null;return{erase:false,gx:fE.gx+Math.round(n.x),gy:tgy,gz:fE.gz+Math.round(n.z)};}if(Math.abs(ray.ray.direction.y)<.001)return null;const t2=(currentLayer-ray.ray.origin.y)/ray.ray.direction.y;if(t2<0)return null;const pt=ray.ray.origin.clone().add(ray.ray.direction.clone().multiplyScalar(t2));const h=GRID/2,gx=Math.floor(pt.x+.5),gz=Math.floor(pt.z+.5);if(gx<-h||gx>=h||gz<-h||gz>=h)return null;return{erase:false,gx,gy:currentLayer,gz};}
 const ghostGeo=new THREE.BoxGeometry(.9,.9,.9);const ghostMat=new THREE.MeshBasicMaterial({color:0x5bf0a5,transparent:true,opacity:.18,depthWrite:false});const ghost=new THREE.Mesh(ghostGeo,ghostMat);ghost.visible=false;scene.add(ghost);ghost.add(new THREE.LineSegments(new THREE.EdgesGeometry(ghostGeo),new THREE.LineBasicMaterial({color:0x5bf0a5,transparent:true,opacity:.45})));
 
 // ===== CAMERA (smooth orbit + pan + zoom) =====
@@ -1771,7 +1810,7 @@ cvs.addEventListener('mousedown',e=>{
     if(e.button===0){
       // Get the hit block's own position (not adjacent face)
       ray.setFromCamera(mouse,camera);
-      const meshes=[];placed.forEach(en=>meshes.push(en.mesh));
+      const meshes=[];placed.forEach(en=>{if(en.mesh.visible)meshes.push(en.mesh);});
       const hits=ray.intersectObjects(meshes);
       let gridCoords=null;
       if(hits.length>0){
@@ -2056,6 +2095,8 @@ function updateStats(){
   // Update nav display
   document.getElementById('lyNavY').textContent='Y'+currentLayer;
   document.getElementById('lyNavM').textContent=(currentLayer*SCALE).toFixed(2)+'m';
+  const simNavY=document.getElementById('simLyNavY'),simNavM=document.getElementById('simLyNavM');
+  if(simNavY)simNavY.textContent='Y'+currentLayer;if(simNavM)simNavM.textContent=(currentLayer*SCALE).toFixed(2)+'m';
   const slider=document.getElementById('lySlider');
   if(placed.size>0){
     slider.min=Math.max(0,minY);slider.max=maxY+2;
@@ -2064,19 +2105,21 @@ function updateStats(){
 
   // Floor buttons (every WALL_H+1 = 4 layers = 1 floor)
   const FLOOR_H=4;
-  const floorsDiv=document.getElementById('lyFloors');
-  floorsDiv.innerHTML='';
+  const floorsContainers=[document.getElementById('lyFloors'),document.getElementById('simLyFloors')].filter(Boolean);
+  floorsContainers.forEach(fd=>fd.innerHTML='');
   if(placed.size>0){
     const loF=Math.floor(minY/FLOOR_H),hiF=Math.floor(maxY/FLOOR_H);
     for(let f=0;f<=hiF-loF;f++){
       const fy=loF+f;
       const baseY=fy*FLOOR_H;
       const isActive=currentLayer>=baseY&&currentLayer<baseY+FLOOR_H;
-      const btn=document.createElement('button');
-      btn.className='ly-floor-btn'+(isActive?' active':'');
-      btn.textContent='F'+(f+1)+' (Y'+baseY+')';
-      btn.onclick=()=>goToLayer(baseY);
-      floorsDiv.appendChild(btn);
+      floorsContainers.forEach(fd=>{
+        const btn=document.createElement('button');
+        btn.className='ly-floor-btn'+(isActive?' active':'');
+        btn.textContent='F'+(f+1)+' (Y'+baseY+')';
+        btn.onclick=()=>goToLayer(baseY);
+        fd.appendChild(btn);
+      });
     }
   }
 
@@ -2127,18 +2170,24 @@ function toggleIsolate(){
   isolateMode=isolateMode==='solo'?'none':'solo';
   document.getElementById('lyIsoBtn').classList.toggle('active',isolateMode==='solo');
   document.getElementById('lyAboveBtn').classList.toggle('active',false);
+  const sib=document.getElementById('simLyIsoBtn'),sab=document.getElementById('simLyAboveBtn');
+  if(sib)sib.classList.toggle('active',isolateMode==='solo');if(sab)sab.classList.toggle('active',false);
   applyVisibility();
 }
 function toggleAbove(){
   isolateMode=isolateMode==='above'?'none':'above';
   document.getElementById('lyAboveBtn').classList.toggle('active',isolateMode==='above');
   document.getElementById('lyIsoBtn').classList.toggle('active',false);
+  const sib=document.getElementById('simLyIsoBtn'),sab=document.getElementById('simLyAboveBtn');
+  if(sib)sib.classList.toggle('active',false);if(sab)sab.classList.toggle('active',isolateMode==='above');
   applyVisibility();
 }
 function resetVisibility(){
   isolateMode='none';
   document.getElementById('lyIsoBtn').classList.remove('active');
   document.getElementById('lyAboveBtn').classList.remove('active');
+  const sib=document.getElementById('simLyIsoBtn'),sab=document.getElementById('simLyAboveBtn');
+  if(sib)sib.classList.remove('active');if(sab)sab.classList.remove('active');
   applyVisibility();
 }
 function applyVisibility(){
@@ -3381,6 +3430,11 @@ function togglePhysics(){
   document.getElementById('physBtn').textContent=physicsPaused?'▶ Play':'⏸ Pause';
 }
 function animate(){requestAnimationFrame(animate);const now=performance.now(),dt=Math.min((now-lastT)/1000,.1);lastT=now;if(!physicsPaused){fTmr+=dt;if(fTmr>=FT){fTmr-=FT;tickFire();procCol();updateStats();if(dimMode==='2d')draw2d();}updFireVis(dt);updateP(dt);updFall(dt);}processKeys();smoothCam();if(simData)tickAgentLerp();if(dimMode==='3d'){const pos=getGridPos();if(pos&&mode==='place'&&!pos.erase&&!orbiting&&!panning){ghost.visible=true;ghost.position.set(pos.gx,pos.gy+.45,pos.gz);ghostMat.color.setHex(BLOCKS[selectedBlock].isFire?0xff6600:BLOCKS[selectedBlock].color);}else ghost.visible=false;renderer.render(scene,camera);}}
+// ── Sync sky/ground colors across viewers via localStorage + BroadcastChannel ──
+const _colorCh=new BroadcastChannel('rescuegrid_colors');
+let _colorBcast=false;
+_colorCh.onmessage=e=>{_colorBcast=true;if(e.data.type==='sky')setSkyColor(e.data.hex);if(e.data.type==='ground')setGroundColor(e.data.hex);_colorBcast=false;};
+(function(){const sk=localStorage.getItem('rescuegrid_skyColor');if(sk)setSkyColor(sk);const gc=localStorage.getItem('rescuegrid_groundColor');if(gc)setGroundColor(gc);})();
 animate();
 </script>
 </body>
