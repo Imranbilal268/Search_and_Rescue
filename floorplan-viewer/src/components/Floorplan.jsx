@@ -195,6 +195,42 @@ function CellLabel({ col, row, size, text }) {
 // AGENT / FIRE OVERLAYS — drawn on top of the grid
 // ─────────────────────────────────────────────────────────────────────────────
 
+function ExitNodeMarker({ col, row, size, label }) {
+  const x  = PADDING + col * size;
+  const y  = PADDING + row * size;
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  return (
+    <g>
+      <rect x={x} y={y} width={size} height={size} fill="rgba(34,197,94,0.18)" stroke="#22c55e" strokeWidth={1.5} strokeDasharray="3,2" />
+      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.35} style={{ userSelect: 'none' }}>🚪</text>
+      {label && (
+        <text x={cx} y={y + size - 4} textAnchor="middle" fontSize={5} fontFamily="sans-serif" fill="#22c55e" opacity={0.9} pointerEvents="none">
+          {label.length > 8 ? label.slice(0, 7) + '…' : label}
+        </text>
+      )}
+    </g>
+  );
+}
+
+function VertConnMarker({ col, row, size, label }) {
+  const x  = PADDING + col * size;
+  const y  = PADDING + row * size;
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  return (
+    <g>
+      <rect x={x} y={y} width={size} height={size} fill="rgba(139,92,246,0.18)" stroke="#8b5cf6" strokeWidth={1.5} strokeDasharray="3,2" />
+      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.4} fontFamily="monospace" fill="#8b5cf6" style={{ userSelect: 'none' }}>↕</text>
+      {label && (
+        <text x={cx} y={y + size - 4} textAnchor="middle" fontSize={5} fontFamily="sans-serif" fill="#8b5cf6" opacity={0.9} pointerEvents="none">
+          {label.length > 8 ? label.slice(0, 7) + '…' : label}
+        </text>
+      )}
+    </g>
+  );
+}
+
 function FireOriginMarker({ col, row, size }) {
   const x  = PADDING + col * size;
   const y  = PADDING + row * size;
@@ -404,6 +440,16 @@ export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellP
           const [x, y] = key.split(",").map(Number);
           return <FireOverlay key={`front-${key}`} col={x} row={y} size={CELL_SIZE} isFrontier={true} />;
         })}
+        {/* Exit nodes (editor mode only) */}
+        {!turnState && (scenario?.exit_nodes ?? [])
+          .filter(n => n.z === floorIndex)
+          .map(n => <ExitNodeMarker key={`exit-${n.id}`} col={n.x} row={n.y} size={CELL_SIZE} label={n.label} />)
+        }
+        {/* Vertical connections (editor mode only) */}
+        {!turnState && (scenario?.vertical_connections ?? [])
+          .filter(vc => (vc.floors ?? []).includes(floorIndex))
+          .map(vc => <VertConnMarker key={`vc-${vc.id}`} col={vc.x} row={vc.y} size={CELL_SIZE} label={vc.label} />)
+        }
         {/* Fire origin marker (editor mode only — no turnState) */}
         {!turnState && (() => {
           const t = scenario?.threat;

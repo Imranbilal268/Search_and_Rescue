@@ -95,10 +95,14 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
   const [responders,    setResponders]    = useState([]);
   const [victims,       setVictims]       = useState([]);
   const [threat,        setThreat]        = useState(null); // null | { type:'fire', origin:{x,y,z}, fire_params:{...} }
-  const [scenarioMode,  setScenarioMode]  = useState(null); // 'place-responder' | 'place-victim' | 'place-fire' | null
+  const [simConfig,      setSimConfig]     = useState({ max_turns: 80, elevator_enabled: false, urgency_weight: 1.5, contention_penalty: 0.2 });
+  const [exitNodes,      setExitNodes]     = useState([]);
+  const [vertConnections,setVertConn]      = useState([]);
+  const [cellPropsMap,   setCellPropsMap]  = useState({});
+  const [scenarioMode,   setScenarioMode]  = useState(null); // 'place-responder'|'place-victim'|'place-fire'|'place-exit'|'place-stairwell'|'place-cell-prop'
   const [showScenario,  setShowScenario]  = useState(true);
 
-  // Auto-load shared JSON
+  // Auto-load shared JSON → go straight to stamps mode
   useEffect(() => {
     if (!initialJson || mode !== null) return;
     const data = processRawJson(initialJson);
@@ -106,28 +110,50 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
     setBuilding(data);
     setRawJson(initialJson);
     setActiveFloor(0);
-    setMode("post-upload");
     // Load existing scenario if present
     const sc = initialJson?.scenario;
-    if (sc?.responders) setResponders(sc.responders);
-    if (sc?.victims)    setVictims(sc.victims);
-    if (sc?.threat)     setThreat(sc.threat);
+    if (sc?.responders)        setResponders(sc.responders);
+    if (sc?.victims)           setVictims(sc.victims);
+    if (sc?.threat)            setThreat(sc.threat);
+    if (sc?.simulation_config) setSimConfig(sc.simulation_config);
+    const b = initialJson?.building || initialJson;
+    if (b?.exit_nodes)           setExitNodes(b.exit_nodes);
+    if (b?.vertical_connections) setVertConn(b.vertical_connections);
+    if (b?.cell_properties)      setCellPropsMap(b.cell_properties);
+    // Go straight to stamps editor
+    const converted = gridToStamps(data.floors);
+    const firstFloor = data.floors[0];
+    setStampsPerFloor(converted);
+    setGridMeta({
+      width:      firstFloor[0]?.length ?? DEFAULT_GRID_WIDTH,
+      height:     firstFloor.length     ?? DEFAULT_GRID_HEIGHT,
+      floorCount: data.floors.length,
+    });
+    setMode("stamps");
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync scenario changes back to shared JSON
+  // Sync scenario + building changes back to shared JSON
   useEffect(() => {
     if (!rawJson) return;
-    const updated = {
-      ...rawJson,
-      scenario: {
-        ...(rawJson.scenario || {}),
-        responders,
-        victims,
-        ...(threat ? { threat } : {}),
-      },
+    const bSrc = rawJson.building ?? rawJson;
+    const bUpdated = {
+      ...bSrc,
+      exit_nodes:           exitNodes,
+      vertical_connections: vertConnections,
+      cell_properties:      cellPropsMap,
     };
+    const scenarioUpdated = {
+      ...(rawJson.scenario || {}),
+      responders,
+      victims,
+      ...(threat ? { threat } : {}),
+      simulation_config: simConfig,
+    };
+    const updated = rawJson.building
+      ? { ...rawJson, building: bUpdated, scenario: scenarioUpdated }
+      : { ...bUpdated, scenario: scenarioUpdated };
     onJsonChange?.(updated);
-  }, [responders, victims, threat]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [responders, victims, threat, simConfig, exitNodes, vertConnections, cellPropsMap]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─────────────────────────────────────────────────────────────────────────
   const compiledGrids = useMemo(() => {
@@ -138,14 +164,18 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
   const paintCell = useCallback((type, x, y) => {
     // If in scenario placement mode, place entity instead
     if (scenarioMode === 'place-responder') {
-      const id = 'R' + (responders.length + 1);
-      setResponders(prev => [...prev, { id, x, y, z: activeFloor }]);
+      setResponders(prev => {
+        const n = prev.length + 1;
+        return [...prev, { id: 'R' + n, label: 'Responder ' + n, x, y, z: activeFloor, equipment: [] }];
+      });
       setScenarioMode(null);
       return;
     }
     if (scenarioMode === 'place-victim') {
-      const id = 'V' + (victims.length + 1);
-      setVictims(prev => [...prev, { id, x, y, z: activeFloor, mobility: 'immobile' }]);
+      setVictims(prev => {
+        const n = prev.length + 1;
+        return [...prev, { id: 'V' + n, label: 'Victim ' + n, x, y, z: activeFloor, mobility: 'immobile' }];
+      });
       setScenarioMode(null);
       return;
     }
@@ -158,6 +188,28 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
       setScenarioMode(null);
       return;
     }
+    if (scenarioMode === 'place-exit') {
+      setExitNodes(prev => {
+        const n = prev.length + 1;
+        return [...prev, { id: 'exit_' + n, x, y, z: activeFloor, label: 'Exit ' + n, always_open: true }];
+      });
+      setScenarioMode(null);
+      return;
+    }
+    if (scenarioMode === 'place-stairwell') {
+      setVertConn(prev => {
+        const n = prev.length + 1;
+        return [...prev, { id: 'stairwell_' + n, type: 'stairwell', label: 'Stairwell ' + n, x, y, floors: [activeFloor], traversal_cost: 3, victim_carry_cost_multiplier: 2.0 }];
+      });
+      setScenarioMode(null);
+      return;
+    }
+    if (scenarioMode === 'place-cell-prop') {
+      const key = `${x},${y},${activeFloor}`;
+      setCellPropsMap(prev => ({ ...prev, [key]: prev[key] ?? { label: '', locked: false } }));
+      setScenarioMode(null);
+      return;
+    }
     const stamp = createStamp(type, x, y);
     stamp.width  = 1;
     stamp.height = 1;
@@ -166,7 +218,7 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
       const filtered = existing.filter(s => !(s.x === x && s.y === y));
       return { ...prev, [activeFloor]: [...filtered, stamp] };
     });
-  }, [activeFloor, scenarioMode, responders, victims]);
+  }, [activeFloor, scenarioMode]);
 
   const addStamp = paintCell;
 
@@ -191,30 +243,25 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
     setBuilding(data);
     setRawJson(data.rawJson ?? null);
     setActiveFloor(0);
-    setMode("post-upload");
     onJsonChange?.(data.rawJson ?? null);
     const sc = data.rawJson?.scenario;
-    if (sc?.responders) setResponders(sc.responders);
-    if (sc?.victims)    setVictims(sc.victims);
-    if (sc?.threat)     setThreat(sc.threat);
-  }
-
-  function handleViewOnly() {
-    setMode("upload");
-    if (rawJson?.scenario) setViewMode("3d");
-  }
-
-  function handleEditAsStamps() {
-    if (!building) return;
-    const converted = gridToStamps(building.floors);
-    const firstFloor = building.floors[0];
+    if (sc?.responders)        setResponders(sc.responders);
+    if (sc?.victims)           setVictims(sc.victims);
+    if (sc?.threat)            setThreat(sc.threat);
+    if (sc?.simulation_config) setSimConfig(sc.simulation_config);
+    const b = data.rawJson?.building || data.rawJson;
+    if (b?.exit_nodes)           setExitNodes(b.exit_nodes);
+    if (b?.vertical_connections) setVertConn(b.vertical_connections);
+    if (b?.cell_properties)      setCellPropsMap(b.cell_properties);
+    // Go straight to stamps editor
+    const converted = gridToStamps(data.floors);
+    const firstFloor = data.floors[0];
     setStampsPerFloor(converted);
     setGridMeta({
       width:      firstFloor[0]?.length ?? DEFAULT_GRID_WIDTH,
       height:     firstFloor.length     ?? DEFAULT_GRID_HEIGHT,
-      floorCount: building.floors.length,
+      floorCount: data.floors.length,
     });
-    setActiveFloor(0);
     setMode("stamps");
   }
 
@@ -260,6 +307,10 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
     setResponders([]);
     setVictims([]);
     setThreat(null);
+    setSimConfig({ max_turns: 80, elevator_enabled: false, urgency_weight: 1.5, contention_penalty: 0.2 });
+    setExitNodes([]);
+    setVertConn([]);
+    setCellPropsMap({});
     setScenarioMode(null);
   }
 
@@ -287,6 +338,30 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
     if (type === 'responder') setResponders(prev => prev.map(r => r.id === id ? { ...r, [field]: n } : r));
     else setVictims(prev => prev.map(v => v.id === id ? { ...v, [field]: n } : v));
   }
+  function updateEntityLabel(type, id, label) {
+    if (type === 'responder') setResponders(prev => prev.map(r => r.id === id ? { ...r, label } : r));
+    else setVictims(prev => prev.map(v => v.id === id ? { ...v, label } : v));
+  }
+  function updateResponderEquipment(id, equipStr) {
+    const equipment = equipStr.split(',').map(s => s.trim()).filter(Boolean);
+    setResponders(prev => prev.map(r => r.id === id ? { ...r, equipment } : r));
+  }
+
+  // ── Exit node helpers ─────────────────────────────────────────────────────
+  function removeExitNode(id)       { setExitNodes(prev => prev.filter(n => n.id !== id)); }
+  function updateExitNode(id, patch){ setExitNodes(prev => prev.map(n => n.id === id ? { ...n, ...patch } : n)); }
+
+  // ── Vertical connection helpers ───────────────────────────────────────────
+  function removeVC(id)       { setVertConn(prev => prev.filter(v => v.id !== id)); }
+  function updateVC(id, patch){ setVertConn(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v)); }
+  function updateVCFloors(id, floorsStr) {
+    const floors = floorsStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    updateVC(id, { floors });
+  }
+
+  // ── Cell property helpers ─────────────────────────────────────────────────
+  function removeCellProp(key)        { setCellPropsMap(prev => { const n = { ...prev }; delete n[key]; return n; }); }
+  function updateCellProp(key, patch) { setCellPropsMap(prev => ({ ...prev, [key]: { ...(prev[key] || {}), ...patch } })); }
 
   // ── Threat helpers ──────────────────────────────────────────────────────
   function updateFireParam(key, val) {
@@ -302,18 +377,18 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
 
   // Derived scenario object for GridView
   const liveScenario = {
-    responders: responders.length ? responders : (rawJson?.scenario?.responders ?? []),
-    victims:    victims.length    ? victims    : (rawJson?.scenario?.victims    ?? []),
-    threat:     threat ?? rawJson?.scenario?.threat ?? null,
+    responders:          responders.length ? responders : (rawJson?.scenario?.responders ?? []),
+    victims:             victims.length    ? victims    : (rawJson?.scenario?.victims    ?? []),
+    threat:              threat ?? rawJson?.scenario?.threat ?? null,
+    exit_nodes:          exitNodes,
+    vertical_connections: vertConnections,
   };
 
   // ── Derived props ──────────────────────────────────────────────────────
-  const currentGrid = mode === "upload"
-    ? building?.floors?.[activeFloor] ?? []
-    : compiledGrids?.[activeFloor]    ?? [];
-  const floorCount     = mode === "upload" ? (building?.floors?.length ?? 1) : gridMeta.floorCount;
-  const roomLabels     = mode === "upload" ? (building?.roomLabels     ?? {}) : {};
-  const cellProperties = mode === "upload" ? (building?.cellProperties ?? {}) : {};
+  const currentGrid    = compiledGrids?.[activeFloor] ?? [];
+  const floorCount     = gridMeta.floorCount;
+  const roomLabels     = building?.roomLabels ?? {};
+  const cellProperties = cellPropsMap;
   const buildingName   = building?.buildingName ?? null;
 
   // ── LANDING ────────────────────────────────────────────────────────────
@@ -372,40 +447,7 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
     );
   }
 
-  // ── POST-UPLOAD ────────────────────────────────────────────────────────
-  if (mode === "post-upload" && building) {
-    const fw = building.floors.length === 1 ? "floor" : "floors";
-    return (
-      <div style={S.fullPage}>
-        <div style={S.postCard}>
-          <div style={{ fontFamily: C.mono, fontSize: 8, color: 'rgba(91,240,165,.5)', letterSpacing: '2px', marginBottom: 12 }}>
-            FILE LOADED
-          </div>
-          <div style={{ fontFamily: C.sans, fontWeight: 700, fontSize: 22, color: '#fff', marginBottom: 4 }}>
-            {building.buildingName ?? "Building"}
-          </div>
-          <div style={{ fontFamily: C.mono, fontSize: 9, color: C.textDim, marginBottom: 24 }}>
-            {building.floors.length} {fw}&nbsp;·&nbsp;
-            {building.floors[0]?.[0]?.length ?? "?"} × {building.floors[0]?.length ?? "?"} cells
-          </div>
-
-          <div style={{ fontFamily: C.mono, fontSize: 9, color: C.textFaint, marginBottom: 14, letterSpacing: '0.5px' }}>
-            HOW WOULD YOU LIKE TO OPEN IT?
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, width: '100%', marginBottom: 16 }}>
-            <PostBtn icon="👁" label="View only" desc="Read-only floor plan." onClick={handleViewOnly} />
-            <PostBtn icon="✏️" label="Edit as stamps" desc="Convert grid to editable cells." onClick={handleEditAsStamps} primary />
-          </div>
-
-          <button style={S.textLink} onClick={handleGoToUpload}>← Upload a different file</button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── EDITOR / VIEWER ────────────────────────────────────────────────────
-  const canEdit = mode === "stamps";
+  // ── EDITOR ─────────────────────────────────────────────────────────────
   const canPlace = scenarioMode !== null;
 
   return (
@@ -422,22 +464,20 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
               · {buildingName}
             </span>
           )}
-          {canEdit && (
-            <span style={{ fontFamily: C.mono, fontSize: 7, color: C.accent, background: C.accentBg, border: `1px solid ${C.accentBdr}`, padding: '2px 7px', borderRadius: 4, letterSpacing: '1px' }}>
-              EDIT
-            </span>
-          )}
-          {canEdit && canPlace && (
-            <span style={{ fontFamily: C.mono, fontSize: 7, color: scenarioMode === 'place-fire' ? '#ff6030' : C.amber, background: scenarioMode === 'place-fire' ? 'rgba(255,96,48,.12)' : C.amberBg, border: `1px solid ${scenarioMode === 'place-fire' ? 'rgba(255,96,48,.3)' : C.amberBdr}`, padding: '2px 7px', borderRadius: 4, letterSpacing: '1px' }}>
-              {scenarioMode === 'place-responder' ? '📍 CLICK TO PLACE RESPONDER' : scenarioMode === 'place-victim' ? '📍 CLICK TO PLACE VICTIM' : '🔥 CLICK TO PLACE FIRE ORIGIN'}
+          {canPlace && (
+            <span style={{ fontFamily: C.mono, fontSize: 7,
+              color: scenarioMode === 'place-fire' ? '#ff6030' : scenarioMode === 'place-exit' ? '#22c55e' : scenarioMode === 'place-stairwell' ? '#8b5cf6' : scenarioMode === 'place-cell-prop' ? C.textDim : C.amber,
+              background: scenarioMode === 'place-fire' ? 'rgba(255,96,48,.12)' : scenarioMode === 'place-exit' ? 'rgba(34,197,94,.1)' : scenarioMode === 'place-stairwell' ? 'rgba(139,92,246,.1)' : scenarioMode === 'place-cell-prop' ? 'rgba(255,255,255,.05)' : C.amberBg,
+              border: `1px solid ${scenarioMode === 'place-fire' ? 'rgba(255,96,48,.3)' : scenarioMode === 'place-exit' ? 'rgba(34,197,94,.3)' : scenarioMode === 'place-stairwell' ? 'rgba(139,92,246,.3)' : scenarioMode === 'place-cell-prop' ? 'rgba(255,255,255,.15)' : C.amberBdr}`,
+              padding: '2px 7px', borderRadius: 4, letterSpacing: '1px' }}>
+              {{ 'place-responder': '📍 CLICK TO PLACE RESPONDER', 'place-victim': '📍 CLICK TO PLACE VICTIM', 'place-fire': '🔥 CLICK TO PLACE FIRE ORIGIN', 'place-exit': '🚪 CLICK TO PLACE EXIT NODE', 'place-stairwell': '↕ CLICK TO PLACE STAIRWELL', 'place-cell-prop': '🏷 CLICK CELL TO TAG' }[scenarioMode]}
             </span>
           )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Grid resize — stamp mode only */}
-          {canEdit && (
-            <div style={S.dimRow}>
+          {/* Grid resize */}
+          <div style={S.dimRow}>
               {[['W', 'width', 3, 50], ['H', 'height', 3, 50], ['FL', 'floorCount', 1, 20]].map(([lbl, field, mn, mx]) => (
                 <label key={field} style={S.dimLabel}>
                   <span style={S.dimLblTxt}>{lbl}</span>
@@ -446,8 +486,7 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
                     style={S.dimInput} />
                 </label>
               ))}
-            </div>
-          )}
+          </div>
           {rawJson && (
             <button style={S.topBtn} onClick={handleOpenInBuildingEditor}>
               🏗 Building Editor
@@ -480,7 +519,7 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
           </button>
         ))}
         <div style={{ flex: 1 }} />
-        {viewMode === 'floorplan' && canEdit && canPlace && (
+        {viewMode === 'floorplan' && canPlace && (
           <button style={{ ...S.tab, color: C.textDim, fontSize: 9 }}
             onClick={() => setScenarioMode(null)}>
             ✕ Cancel placement
@@ -500,7 +539,7 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
         <div style={S.mainArea}>
           {viewMode === "3d" ? (
             <SimView rawJson={rawJson} />
-          ) : canEdit ? (
+          ) : (
             <div style={S.editorRow}>
               <StampPalette selectedType={selectedStampType} onSelect={setSelectedStampType} />
               <FloorCanvas
@@ -517,15 +556,6 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
                 scenario={liveScenario}
               />
             </div>
-          ) : (
-            <GridView
-              grid={currentGrid}
-              floorIndex={activeFloor}
-              roomLabels={roomLabels}
-              cellProperties={cellProperties}
-              scenario={liveScenario}
-              turnState={null}
-            />
           )}
         </div>
 
@@ -547,19 +577,15 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
                   onRemove={() => removeResponder(r.id)}
                   onFloorChange={z => updateEntityFloor('responder', r.id, z)}
                   onCoordChange={(f, v) => updateEntityCoord('responder', r.id, f, v)}
+                  onLabelChange={lbl => updateEntityLabel('responder', r.id, lbl)}
+                  onEquipmentChange={eq => updateResponderEquipment(r.id, eq)}
                 />
               ))}
               <button
-                style={{ ...S.addBtn, borderColor: C.blueBdr, color: C.blue, background: (canEdit && scenarioMode === 'place-responder') ? C.blueBg : 'transparent' }}
-                onClick={() => {
-                  if (canEdit) {
-                    setScenarioMode(scenarioMode === 'place-responder' ? null : 'place-responder');
-                  } else {
-                    setResponders(prev => [...prev, { id: 'R' + (prev.length + 1), x: 0, y: 0, z: activeFloor }]);
-                  }
-                }}
+                style={{ ...S.addBtn, borderColor: C.blueBdr, color: C.blue, background: scenarioMode === 'place-responder' ? C.blueBg : 'transparent' }}
+                onClick={() => setScenarioMode(scenarioMode === 'place-responder' ? null : 'place-responder')}
               >
-                + {canEdit && scenarioMode === 'place-responder' ? 'Click grid to place…' : 'Add Responder'}
+                + {scenarioMode === 'place-responder' ? 'Click grid to place…' : 'Add Responder'}
               </button>
             </div>
 
@@ -578,20 +604,15 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
                   onRemove={() => removeVictim(v.id)}
                   onFloorChange={z => updateEntityFloor('victim', v.id, z)}
                   onCoordChange={(f, val) => updateEntityCoord('victim', v.id, f, val)}
+                  onLabelChange={lbl => updateEntityLabel('victim', v.id, lbl)}
                   onMobilityChange={m => updateVictimMobility(v.id, m)}
                 />
               ))}
               <button
-                style={{ ...S.addBtn, borderColor: C.amberBdr, color: C.amber, background: (canEdit && scenarioMode === 'place-victim') ? C.amberBg : 'transparent' }}
-                onClick={() => {
-                  if (canEdit) {
-                    setScenarioMode(scenarioMode === 'place-victim' ? null : 'place-victim');
-                  } else {
-                    setVictims(prev => [...prev, { id: 'V' + (prev.length + 1), x: 0, y: 0, z: activeFloor, mobility: 'immobile' }]);
-                  }
-                }}
+                style={{ ...S.addBtn, borderColor: C.amberBdr, color: C.amber, background: scenarioMode === 'place-victim' ? C.amberBg : 'transparent' }}
+                onClick={() => setScenarioMode(scenarioMode === 'place-victim' ? null : 'place-victim')}
               >
-                + {canEdit && scenarioMode === 'place-victim' ? 'Click grid to place…' : 'Add Victim'}
+                + {scenarioMode === 'place-victim' ? 'Click grid to place…' : 'Add Victim'}
               </button>
             </div>
 
@@ -643,29 +664,118 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
                         style={{ ...S.entityInput, width: 46, color: '#ff8844' }} />
                     </div>
                   ))}
-                  {canEdit && (
-                    <button
-                      style={{ ...S.addBtn, marginTop: 6, borderColor: 'rgba(255,96,48,.3)', color: '#ff6030', background: scenarioMode === 'place-fire' ? 'rgba(255,96,48,.1)' : 'transparent', fontSize: 8 }}
-                      onClick={() => setScenarioMode(scenarioMode === 'place-fire' ? null : 'place-fire')}
-                    >
-                      {scenarioMode === 'place-fire' ? 'Click grid to reposition…' : '↺ Reposition origin'}
-                    </button>
-                  )}
+                  <button
+                    style={{ ...S.addBtn, marginTop: 6, borderColor: 'rgba(255,96,48,.3)', color: '#ff6030', background: scenarioMode === 'place-fire' ? 'rgba(255,96,48,.1)' : 'transparent', fontSize: 8 }}
+                    onClick={() => setScenarioMode(scenarioMode === 'place-fire' ? null : 'place-fire')}
+                  >
+                    {scenarioMode === 'place-fire' ? 'Click grid to reposition…' : '↺ Reposition origin'}
+                  </button>
                 </div>
               ) : (
                 <button
-                  style={{ ...S.addBtn, borderColor: 'rgba(255,96,48,.25)', color: '#ff6030', background: (canEdit && scenarioMode === 'place-fire') ? 'rgba(255,96,48,.1)' : 'transparent' }}
-                  onClick={() => {
-                    if (canEdit) {
-                      setScenarioMode(scenarioMode === 'place-fire' ? null : 'place-fire');
-                    } else {
-                      setThreat({ type: 'fire', origin: { x: 0, y: 0, z: activeFloor }, fire_params: { spread_probability: 0.4, stairwell_acceleration: 2.0, accelerant_bonus: 0.3 } });
-                    }
-                  }}
+                  style={{ ...S.addBtn, borderColor: 'rgba(255,96,48,.25)', color: '#ff6030', background: scenarioMode === 'place-fire' ? 'rgba(255,96,48,.1)' : 'transparent' }}
+                  onClick={() => setScenarioMode(scenarioMode === 'place-fire' ? null : 'place-fire')}
                 >
-                  + {canEdit && scenarioMode === 'place-fire' ? 'Click grid to place…' : 'Add Fire'}
+                  + {scenarioMode === 'place-fire' ? 'Click grid to place…' : 'Add Fire'}
                 </button>
               )}
+            </div>
+
+            <div style={S.divider} />
+
+            {/* Exit Nodes */}
+            <div style={S.sideSection}>
+              <div style={S.sideSectionHeader}>
+                <span style={{ ...S.sideLabel, color: '#22c55e' }}>🚪 EXIT NODES</span>
+                <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{exitNodes.length}</span>
+              </div>
+              {exitNodes.map((node) => (
+                <ExitNodeRow key={node.id} node={node} floorCount={floorCount}
+                  onRemove={() => removeExitNode(node.id)}
+                  onUpdate={patch => updateExitNode(node.id, patch)}
+                />
+              ))}
+              <button
+                style={{ ...S.addBtn, borderColor: 'rgba(34,197,94,.3)', color: '#22c55e', background: scenarioMode === 'place-exit' ? 'rgba(34,197,94,.1)' : 'transparent' }}
+                onClick={() => setScenarioMode(scenarioMode === 'place-exit' ? null : 'place-exit')}
+              >
+                + {scenarioMode === 'place-exit' ? 'Click grid to place…' : 'Add Exit Node'}
+              </button>
+            </div>
+
+            <div style={S.divider} />
+
+            {/* Vertical Connections */}
+            <div style={S.sideSection}>
+              <div style={S.sideSectionHeader}>
+                <span style={{ ...S.sideLabel, color: '#8b5cf6' }}>↕ VERTICAL CONN.</span>
+                <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{vertConnections.length}</span>
+              </div>
+              {vertConnections.map((vc) => (
+                <VCRow key={vc.id} vc={vc} floorCount={floorCount}
+                  onRemove={() => removeVC(vc.id)}
+                  onUpdate={patch => updateVC(vc.id, patch)}
+                  onFloorsChange={str => updateVCFloors(vc.id, str)}
+                />
+              ))}
+              <button
+                style={{ ...S.addBtn, borderColor: 'rgba(139,92,246,.3)', color: '#8b5cf6', background: scenarioMode === 'place-stairwell' ? 'rgba(139,92,246,.1)' : 'transparent' }}
+                onClick={() => setScenarioMode(scenarioMode === 'place-stairwell' ? null : 'place-stairwell')}
+              >
+                + {scenarioMode === 'place-stairwell' ? 'Click grid to place…' : 'Add Stairwell'}
+              </button>
+            </div>
+
+            <div style={S.divider} />
+
+            {/* Cell Properties */}
+            <div style={S.sideSection}>
+              <div style={S.sideSectionHeader}>
+                <span style={{ ...S.sideLabel, color: C.textDim }}>🏷 CELL PROPS</span>
+                <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{Object.keys(cellPropsMap).length}</span>
+              </div>
+              {Object.entries(cellPropsMap).map(([key, props]) => (
+                <CellPropRow key={key} propKey={key} props={props}
+                  onRemove={() => removeCellProp(key)}
+                  onUpdate={patch => updateCellProp(key, patch)}
+                />
+              ))}
+              <button
+                style={{ ...S.addBtn, borderColor: 'rgba(255,255,255,.12)', color: C.textDim, background: scenarioMode === 'place-cell-prop' ? 'rgba(255,255,255,.06)' : 'transparent' }}
+                onClick={() => setScenarioMode(scenarioMode === 'place-cell-prop' ? null : 'place-cell-prop')}
+              >
+                + {scenarioMode === 'place-cell-prop' ? 'Click cell to tag…' : 'Tag Cell'}
+              </button>
+            </div>
+
+            <div style={S.divider} />
+
+            {/* Simulation Config */}
+            <div style={S.sideSection}>
+              <div style={S.sideSectionHeader}>
+                <span style={{ ...S.sideLabel, color: C.accent }}>⚙ SIM CONFIG</span>
+              </div>
+              <div style={{ background: 'rgba(91,240,165,.03)', border: '1px solid rgba(91,240,165,.1)', borderRadius: 7, padding: '8px', marginBottom: 5 }}>
+                {[
+                  ['max_turns',          'Max turns',        'number', 1,   500, 1  ],
+                  ['urgency_weight',     'Urgency weight',   'number', 0,   5,   0.1],
+                  ['contention_penalty', 'Contention pen.',  'number', 0,   2,   0.05],
+                ].map(([key, label, , min, max, step]) => (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint }}>{label}</span>
+                    <input type="number" min={min} max={max} step={step}
+                      value={simConfig[key]}
+                      onChange={e => setSimConfig(prev => ({ ...prev, [key]: parseFloat(e.target.value) || 0 }))}
+                      style={{ ...S.entityInput, width: 50, color: C.accent }} />
+                  </div>
+                ))}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint }}>Elevator</span>
+                  <input type="checkbox" checked={simConfig.elevator_enabled}
+                    onChange={e => setSimConfig(prev => ({ ...prev, elevator_enabled: e.target.checked }))}
+                    style={{ accentColor: C.accent, cursor: 'pointer' }} />
+                </div>
+              </div>
             </div>
 
             <div style={S.divider} />
@@ -763,7 +873,7 @@ function PostBtn({ icon, label, desc, onClick, primary }) {
   );
 }
 
-function EntityRow({ entity, type, index, floorCount, onRemove, onFloorChange, onCoordChange, onMobilityChange }) {
+function EntityRow({ entity, type, index, floorCount, onRemove, onFloorChange, onCoordChange, onLabelChange, onEquipmentChange, onMobilityChange }) {
   const accent = type === 'responder' ? C.blue : C.amber;
   return (
     <div style={{
@@ -776,6 +886,16 @@ function EntityRow({ entity, type, index, floorCount, onRemove, onFloorChange, o
           background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4,
           color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px',
         }}>✕</button>
+      </div>
+      {/* Label */}
+      <div style={{ marginBottom: 5 }}>
+        <input
+          type="text"
+          value={entity.label ?? ''}
+          placeholder="Label…"
+          onChange={e => onLabelChange?.(e.target.value)}
+          style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: accent, outline: 'none', boxSizing: 'border-box' }}
+        />
       </div>
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {[['x', entity.x], ['y', entity.y]].map(([field, val]) => (
@@ -802,6 +922,114 @@ function EntityRow({ entity, type, index, floorCount, onRemove, onFloorChange, o
           </select>
         )}
       </div>
+      {/* Equipment (responders only) */}
+      {type === 'responder' && (
+        <div style={{ marginTop: 5 }}>
+          <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 2 }}>EQUIPMENT (comma-sep)</div>
+          <input
+            type="text"
+            value={(entity.equipment ?? []).join(', ')}
+            placeholder="ax, medic_kit, ladder…"
+            onChange={e => onEquipmentChange?.(e.target.value)}
+            style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: C.blue, outline: 'none', boxSizing: 'border-box' }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Exit Node row ───────────────────────────────────────────────────────────
+function ExitNodeRow({ node, floorCount, onRemove, onUpdate }) {
+  return (
+    <div style={{ background: 'rgba(34,197,94,.03)', border: '1px solid rgba(34,197,94,.1)', borderRadius: 7, padding: '7px 8px', marginBottom: 5 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+        <span style={{ fontFamily: C.mono, fontSize: 9, color: '#22c55e', fontWeight: 700 }}>{node.id}</span>
+        <button onClick={onRemove} style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
+      </div>
+      <input type="text" value={node.label ?? ''} placeholder="Label…"
+        onChange={e => onUpdate({ label: e.target.value })}
+        style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: '#22c55e', outline: 'none', boxSizing: 'border-box', marginBottom: 5 }} />
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+        {[['x', node.x], ['y', node.y]].map(([f, v]) => (
+          <label key={f} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{f.toUpperCase()}</span>
+            <input type="number" min={0} value={v} onChange={e => onUpdate({ [f]: Math.max(0, parseInt(e.target.value) || 0) })} style={S.entityInput} />
+          </label>
+        ))}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>FL</span>
+          <input type="number" min={0} max={Math.max(0, floorCount - 1)} value={node.z ?? 0} onChange={e => onUpdate({ z: Math.max(0, parseInt(e.target.value) || 0) })} style={S.entityInput} />
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>OPEN</span>
+          <input type="checkbox" checked={node.always_open ?? true} onChange={e => onUpdate({ always_open: e.target.checked })} style={{ accentColor: '#22c55e', cursor: 'pointer' }} />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+// ── Vertical Connection row ──────────────────────────────────────────────────
+function VCRow({ vc, floorCount, onRemove, onUpdate, onFloorsChange }) {
+  return (
+    <div style={{ background: 'rgba(139,92,246,.03)', border: '1px solid rgba(139,92,246,.1)', borderRadius: 7, padding: '7px 8px', marginBottom: 5 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+        <span style={{ fontFamily: C.mono, fontSize: 9, color: '#8b5cf6', fontWeight: 700 }}>{vc.id}</span>
+        <button onClick={onRemove} style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
+      </div>
+      <input type="text" value={vc.label ?? ''} placeholder="Label…"
+        onChange={e => onUpdate({ label: e.target.value })}
+        style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: '#8b5cf6', outline: 'none', boxSizing: 'border-box', marginBottom: 5 }} />
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 5 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>TYPE</span>
+          <select value={vc.type ?? 'stairwell'} onChange={e => onUpdate({ type: e.target.value })}
+            style={{ ...S.mobilitySelect, color: '#8b5cf6' }}>
+            <option value="stairwell">stairwell</option>
+            <option value="elevator">elevator</option>
+          </select>
+        </label>
+        {[['x', vc.x], ['y', vc.y]].map(([f, v]) => (
+          <label key={f} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{f.toUpperCase()}</span>
+            <input type="number" min={0} value={v} onChange={e => onUpdate({ [f]: Math.max(0, parseInt(e.target.value) || 0) })} style={S.entityInput} />
+          </label>
+        ))}
+      </div>
+      <div style={{ marginBottom: 5 }}>
+        <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 2 }}>FLOORS (comma-sep)</div>
+        <input type="text" value={(vc.floors ?? []).join(', ')} placeholder="0, 1, 2"
+          onChange={e => onFloorsChange(e.target.value)}
+          style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: '#8b5cf6', outline: 'none', boxSizing: 'border-box' }} />
+      </div>
+      {[['traversal_cost','Traversal cost',1,20,1],['victim_carry_cost_multiplier','Carry mult.',0.5,5,0.5]].map(([k,lbl,mn,mx,st]) => (
+        <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+          <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint }}>{lbl}</span>
+          <input type="number" min={mn} max={mx} step={st} value={vc[k] ?? (k === 'traversal_cost' ? 3 : 2)}
+            onChange={e => onUpdate({ [k]: parseFloat(e.target.value) || mn })}
+            style={{ ...S.entityInput, width: 46, color: '#8b5cf6' }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Cell Property row ────────────────────────────────────────────────────────
+function CellPropRow({ propKey, props, onRemove, onUpdate }) {
+  return (
+    <div style={{ background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.05)', borderRadius: 7, padding: '7px 8px', marginBottom: 5 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+        <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textDim }}>{propKey}</span>
+        <button onClick={onRemove} style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
+      </div>
+      <input type="text" value={props.label ?? ''} placeholder="Label…"
+        onChange={e => onUpdate({ label: e.target.value })}
+        style={{ width: '100%', padding: '3px 5px', fontFamily: C.mono, fontSize: 8, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 4, color: C.text, outline: 'none', boxSizing: 'border-box', marginBottom: 5 }} />
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>LOCKED</span>
+        <input type="checkbox" checked={props.locked ?? false} onChange={e => onUpdate({ locked: e.target.checked })} style={{ accentColor: C.red, cursor: 'pointer' }} />
+      </label>
     </div>
   );
 }
