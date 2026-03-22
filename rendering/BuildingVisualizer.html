@@ -23,9 +23,9 @@ canvas{display:block}
 @keyframes fp{from{box-shadow:0 0 6px #ff4400}to{box-shadow:0 0 14px #ff8800}}
 
 /* --- RIGHT CONTROL PANEL (tabbed) --- */
-.ctrl-panel{position:absolute;top:60px;right:12px;width:168px;background:rgba(10,10,18,.92);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);pointer-events:all;display:flex;flex-direction:column;overflow:hidden;max-height:calc(100vh - 130px);z-index:15}
+.ctrl-panel{position:absolute;top:60px;right:12px;width:192px;background:rgba(10,10,18,.92);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);pointer-events:all;display:flex;flex-direction:column;overflow:hidden;max-height:calc(100vh - 80px);z-index:15}
 .ctrl-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
-.ctrl-tab{flex:1;padding:8px 0;border:none;background:transparent;color:rgba(255,255,255,.3);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.6px;text-transform:uppercase;transition:all .2s;position:relative}
+.ctrl-tab{flex:1;padding:7px 0;border:none;background:transparent;color:rgba(255,255,255,.3);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:.4px;text-transform:uppercase;transition:all .2s;position:relative}
 .ctrl-tab:hover{color:rgba(255,255,255,.6);background:rgba(255,255,255,.03)}
 .ctrl-tab.active{color:var(--accent)}
 .ctrl-tab.active::after{content:'';position:absolute;bottom:-1px;left:15%;right:15%;height:2px;background:var(--accent);border-radius:1px}
@@ -101,11 +101,39 @@ canvas{display:block}
 .ly-iso-btn.accent{border-color:rgba(91,240,165,.12);color:rgba(91,240,165,.4)}
 .ly-iso-btn.accent:hover{color:var(--accent);border-color:var(--accent)}
 /* Build tools */
-.tool-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:3px;margin-bottom:4px}
-.tool-btn{padding:4px 1px;border-radius:5px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);color:rgba(255,255,255,.3);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:7px;text-align:center;transition:all .12s;white-space:nowrap;overflow:hidden}
-.tool-btn:hover{color:rgba(255,255,255,.7);background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
-.tool-btn.active{color:var(--accent);border-color:rgba(91,240,165,.25);background:rgba(91,240,165,.06)}
-.tool-info{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:rgba(255,255,255,.2);padding:2px 0 4px;min-height:14px}
+.mode-switch{display:flex;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.08);margin-bottom:6px;background:rgba(0,0,0,.2)}
+.mode-sw-btn{flex:1;padding:7px 0;border:none;background:transparent;color:rgba(255,255,255,.25);cursor:pointer;font-family:'Outfit',sans-serif;font-size:10px;letter-spacing:.8px;transition:all .2s;font-weight:700;text-transform:uppercase}
+.mode-sw-btn:hover{color:rgba(255,255,255,.5)}
+.mode-sw-btn.active[data-mode="place"]{color:var(--accent);background:rgba(91,240,165,.12);text-shadow:0 0 12px rgba(91,240,165,.3)}
+.mode-sw-btn.active[data-mode="erase"]{color:#ff7766;background:rgba(255,100,80,.1);text-shadow:0 0 12px rgba(255,100,80,.2)}
+/* Layer strip in tools */
+.ly-strip{display:flex;align-items:center;gap:4px;margin-bottom:6px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:4px 6px}
+.ly-strip-btn{width:26px;height:26px;border-radius:6px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:rgba(255,255,255,.35);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0;padding:0}
+.ly-strip-btn:hover{color:#fff;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15)}
+.ly-strip-btn:active{transform:scale(.9)}
+.ly-strip-info{flex:1;text-align:center;font-family:'JetBrains Mono',monospace;line-height:1.3}
+.ly-strip-y{font-size:12px;font-weight:700;color:var(--accent);display:block}
+.ly-strip-m{font-size:7px;color:rgba(255,255,255,.2);display:block}
+/* Tool grid - compact */
+.tools-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:3px;margin-bottom:6px}
+.tg-btn{padding:6px 2px;border-radius:6px;border:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02);color:rgba(255,255,255,.3);cursor:pointer;font-family:'JetBrains Mono',monospace;text-align:center;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:1px}
+.tg-btn:hover{color:rgba(255,255,255,.7);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
+.tg-btn.active{color:var(--accent);border-color:rgba(91,240,165,.25);background:rgba(91,240,165,.06)}
+.tg-btn .tg-ico{font-size:14px;line-height:1}
+.tg-btn .tg-name{font-size:7px;letter-spacing:.2px}
+/* Tool detail */
+.tool-detail{padding:5px 8px;border-radius:6px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);margin-bottom:5px}
+.tool-detail .td-name{font-family:'Outfit',sans-serif;font-size:10px;font-weight:600;color:rgba(255,255,255,.45);margin-bottom:2px}
+.tool-detail .td-desc{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,.18);line-height:1.4}
+.tool-detail .td-keys{font-family:'JetBrains Mono',monospace;font-size:6.5px;color:rgba(255,255,255,.12);margin-top:2px;display:flex;gap:3px;flex-wrap:wrap}
+.tool-detail .td-key{padding:1px 4px;border:1px solid rgba(255,255,255,.07);border-radius:3px;background:rgba(255,255,255,.02)}
+/* Physics bar */
+.phys-bar{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02);cursor:pointer;transition:all .15s}
+.phys-bar:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08)}
+.phys-bar .pb-dot{width:7px;height:7px;border-radius:50%;background:#ff5544;flex-shrink:0;transition:all .25s}
+.phys-bar.on .pb-dot{background:var(--accent);box-shadow:0 0 6px rgba(91,240,165,.3)}
+.phys-bar .pb-lbl{font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(255,255,255,.25);flex:1}
+.phys-bar .pb-key{font-family:'JetBrains Mono',monospace;font-size:6.5px;color:rgba(255,255,255,.12);padding:1px 5px;border:1px solid rgba(255,255,255,.07);border-radius:3px}
 /* Layer rows - enhanced */
 .layer-row .ly-bar-wrap{width:40px;height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;flex-shrink:0}
 .layer-row .ly-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .2s}
@@ -214,7 +242,7 @@ body.sim-mode #simCamHint{display:block}
     <button class="dim-btn active" data-dim="3d" onclick="setDim('3d')">3D</button>
     <button class="dim-btn" data-dim="2d" onclick="setDim('2d')">2D PLAN</button>
   </div>
-  <div class="plan-info" id="planInfo">Layer Y<span id="pi-y">0</span> · <span id="pi-m">0.00m</span> · LMB tool action · RMB erase/cancel · MMB pan · Esc cancel · [/] layers</div>
+  <div class="plan-info" id="planInfo">Layer Y<span id="pi-y">0</span> · <span id="pi-m">0.00m</span> · WASD pan · LMB tool · RMB erase · Scroll zoom · [/] layers</div>
 
   <!-- TOP-LEFT: Title -->
   <div class="top-left"><h1>Block Builder</h1><span class="subtitle">Fire &amp; Structure Sim</span></div>
@@ -223,39 +251,59 @@ body.sim-mode #simCamHint{display:block}
   <!-- RIGHT: Tabbed Control Panel -->
   <div class="ctrl-panel" id="ctrlPanel">
     <div class="ctrl-tabs">
-      <button class="ctrl-tab active" data-tab="build" onclick="setCtrlTab('build')">Build</button>
+      <button class="ctrl-tab active" data-tab="tools" onclick="setCtrlTab('tools')">Tools</button>
+      <button class="ctrl-tab" data-tab="build" onclick="setCtrlTab('build')">Build</button>
       <button class="ctrl-tab" data-tab="view" onclick="setCtrlTab('view')">View</button>
       <button class="ctrl-tab" data-tab="layers" onclick="setCtrlTab('layers')">Layers</button>
       <button class="ctrl-tab" data-tab="info" onclick="setCtrlTab('info')">Info</button>
     </div>
     <div class="ctrl-body">
 
+      <!-- TOOLS TAB -->
+      <div class="ctrl-section active" data-tab="tools">
+        <div class="mode-switch">
+          <button class="mode-sw-btn active" data-mode="place" onclick="setMode('place')">Place</button>
+          <button class="mode-sw-btn" data-mode="erase" onclick="setMode('erase')">Erase</button>
+        </div>
+        <div class="ly-strip">
+          <button class="ly-strip-btn" onclick="layerStep(-1)">▼</button>
+          <div class="ly-strip-info">
+            <span class="ly-strip-y" id="lyStripY">Y0</span>
+            <span class="ly-strip-m" id="lyStripM">0.00m</span>
+          </div>
+          <button class="ly-strip-btn" onclick="layerStep(1)">▲</button>
+        </div>
+        <div class="tools-grid">
+          <button class="tg-btn active" data-tool="pen" onclick="setTool('pen')"><span class="tg-ico">✏️</span><span class="tg-name">Pen</span></button>
+          <button class="tg-btn" data-tool="line" onclick="setTool('line')"><span class="tg-ico">📏</span><span class="tg-name">Line</span></button>
+          <button class="tg-btn" data-tool="rect" onclick="setTool('rect')"><span class="tg-ico">⬜</span><span class="tg-name">Rect</span></button>
+          <button class="tg-btn" data-tool="flood" onclick="setTool('flood')"><span class="tg-ico">🪣</span><span class="tg-name">Fill</span></button>
+          <button class="tg-btn" data-tool="wall" onclick="setTool('wall')"><span class="tg-ico">🧱</span><span class="tg-name">Wall</span></button>
+          <button class="tg-btn" data-tool="room" onclick="setTool('room')"><span class="tg-ico">🏗️</span><span class="tg-name">Room</span></button>
+          <button class="tg-btn" data-tool="replace" onclick="setTool('replace')"><span class="tg-ico">🔄</span><span class="tg-name">Repl</span></button>
+          <button class="tg-btn" data-tool="replall" onclick="setTool('replall')"><span class="tg-ico">🔃</span><span class="tg-name">All</span></button>
+        </div>
+        <div class="tool-detail" id="toolInfo">
+          <div class="td-name">Pen</div>
+          <div class="td-desc">Click or drag to place/erase blocks.</div>
+          <div class="td-keys"><span class="td-key">LMB</span> place <span class="td-key">RMB</span> erase</div>
+        </div>
+        <div class="phys-bar on" id="physToggle" onclick="togglePhysics()">
+          <div class="pb-dot"></div>
+          <span class="pb-lbl">Physics running</span>
+          <span class="pb-key">P</span>
+        </div>
+      </div>
+
       <!-- BUILD TAB -->
-      <div class="ctrl-section active" data-tab="build">
-        <div class="sec-label">Mode</div>
-        <div class="mode-row">
-          <button class="mode-btn2 active" data-mode="place" onclick="setMode('place')">PLACE</button>
-          <button class="mode-btn2" data-mode="erase" onclick="setMode('erase')">ERASE</button>
-          <button class="mode-btn2 active" id="physBtn" onclick="togglePhysics()" title="Pause/Play physics (P)" style="flex:.8">⏸ Pause</button>
-        </div>
-        <div class="sec-label">Tools (2D)</div>
-        <div class="tool-grid">
-          <button class="tool-btn active" data-tool="pen" onclick="setTool('pen')" title="Single block">✏️ Pen</button>
-          <button class="tool-btn" data-tool="line" onclick="setTool('line')" title="Line between 2 points">📏 Line</button>
-          <button class="tool-btn" data-tool="rect" onclick="setTool('rect')" title="Fill rectangle">⬜ Rect</button>
-          <button class="tool-btn" data-tool="wall" onclick="setTool('wall')" title="Auto wall (full height)">🧱 Wall</button>
-          <button class="tool-btn" data-tool="room" onclick="setTool('room')" title="4-wall room">🏗️ Room</button>
-          <button class="tool-btn" data-tool="flood" onclick="setTool('flood')" title="Flood fill empty area">🪣 Fill</button>
-          <button class="tool-btn" data-tool="replace" onclick="setTool('replace')" title="Replace connected same-type">🔄 Replace</button>
-          <button class="tool-btn" data-tool="replall" onclick="setTool('replall')" title="Replace ALL of a type on layer">🔃 Repl All</button>
-        </div>
-        <div class="tool-info" id="toolInfo">Pen: click to place blocks</div>
+      <div class="ctrl-section" data-tab="build">
         <div class="sec-label">Presets</div>
         <button class="cp-btn" onclick="spawnPreset('house')"><span class="cp-icon">🏠</span><span class="cp-info"><span class="cp-name">Suburban House</span><span class="cp-desc">2-floor · 3 bed · garage</span></span></button>
         <button class="cp-btn" onclick="spawnPreset('office')"><span class="cp-icon">🏢</span><span class="cp-info"><span class="cp-name">Office Building</span><span class="cp-desc">3-floor · open plan · conf rooms</span></span></button>
         <button class="cp-btn" onclick="spawnPreset('firestation')"><span class="cp-icon">🚒</span><span class="cp-info"><span class="cp-name">Fire Station</span><span class="cp-desc">2-floor · 2 bays · bunk rooms</span></span></button>
         <div class="sec-label">Floorplan</div>
         <button class="cp-btn import" onclick="openImport()"><span class="cp-icon">📐</span><span class="cp-info"><span class="cp-name">Import JSON</span><span class="cp-desc">paste floorplan data</span></span></button>
+        <button class="cp-btn import" onclick="openExport()"><span class="cp-icon">📤</span><span class="cp-info"><span class="cp-name">Export JSON</span><span class="cp-desc">save current building</span></span></button>
         <div style="height:6px"></div>
         <button class="cp-btn danger" onclick="clearAll()"><span class="cp-icon" style="font-size:11px">✕</span><span class="cp-name">Clear all</span></button>
       </div>
@@ -270,18 +318,18 @@ body.sim-mode #simCamHint{display:block}
         <button class="vm-btn" data-vm="thermal" onclick="setView('thermal')"><span class="vdot" style="background:#f72"></span>Thermal</button>
         <div class="sec-label">Camera</div>
         <div class="cam-grid">
-          <button class="cam-btn" onclick="camOrbit(-.3,0)" title="Rotate left">◀</button>
-          <button class="cam-btn" onclick="camPan(0,-1)" title="Pan forward">▲</button>
-          <button class="cam-btn" onclick="camOrbit(.3,0)" title="Rotate right">▶</button>
-          <button class="cam-btn" onclick="camPan(-1,0)" title="Pan left">◁</button>
-          <button class="cam-btn" onclick="camPan(0,1)" title="Pan back">▼</button>
-          <button class="cam-btn" onclick="camPan(1,0)" title="Pan right">▷</button>
-          <button class="cam-btn" onclick="camOrbit(0,.15)" title="Tilt up">↑</button>
-          <button class="cam-btn accent" onclick="camReset()" title="Reset camera">R</button>
-          <button class="cam-btn" onclick="camOrbit(0,-.15)" title="Tilt down">↓</button>
-          <button class="cam-btn" onclick="camZoom(-3)" title="Zoom in">+</button>
-          <button class="cam-btn accent" onclick="camFocus()" title="Focus on building">F</button>
-          <button class="cam-btn" onclick="camZoom(3)" title="Zoom out">−</button>
+          <button class="cam-btn" onclick="camOrbit(-.3,0)" title="Orbit left (Q)">⟲</button>
+          <button class="cam-btn" onclick="camPan(0,1)" title="Pan forward (W)">▲</button>
+          <button class="cam-btn" onclick="camOrbit(.3,0)" title="Orbit right (E)">⟳</button>
+          <button class="cam-btn" onclick="camPan(-1,0)" title="Pan left (A)">◀</button>
+          <button class="cam-btn" onclick="camPan(0,-1)" title="Pan backward (S)">▼</button>
+          <button class="cam-btn" onclick="camPan(1,0)" title="Pan right (D)">▶</button>
+          <button class="cam-btn" onclick="camOrbit(0,.15)" title="Tilt down">↓</button>
+          <button class="cam-btn accent" onclick="camReset()" title="Reset camera (R)">R</button>
+          <button class="cam-btn" onclick="camOrbit(0,-.15)" title="Tilt up">↑</button>
+          <button class="cam-btn" onclick="camZoom(-3)" title="Zoom in (+)">+</button>
+          <button class="cam-btn accent" onclick="camFocus()" title="Focus on building (F)">F</button>
+          <button class="cam-btn" onclick="camZoom(3)" title="Zoom out (−)">−</button>
         </div>
         <div class="sec-label">Preset Angles</div>
         <div class="angle-row">
@@ -354,6 +402,19 @@ body.sim-mode #simCamHint{display:block}
       </div>
     </div>
   </div>
+  <div class="modal-overlay" id="exportModal">
+    <div class="modal">
+      <h2>Export Building JSON</h2>
+      <div class="sub">COPY THIS JSON TO SAVE YOUR BUILDING · REIMPORT ANYTIME</div>
+      <textarea id="jsonOutput" readonly style="cursor:text"></textarea>
+      <div class="modal-actions">
+        <span class="info" id="exportInfo"></span>
+        <button class="modal-btn sample" onclick="copyExport()">COPY TO CLIPBOARD</button>
+        <button class="modal-btn" onclick="downloadExport()">DOWNLOAD .JSON</button>
+        <button class="modal-btn primary" onclick="closeExport()">CLOSE</button>
+      </div>
+    </div>
+  </div>
 
   <!-- SIMULATION TIMELINE -->
   <div id="simBar">
@@ -375,14 +436,14 @@ body.sim-mode #simCamHint{display:block}
   </div>
 
   <!-- BOTTOM: Materials toolbar + hint -->
-  <div class="hint">WASD move · Scroll zoom · [/] layers · X mode · P pause · M materials · I solo · U cut · Tab 2D/3D</div>
+  <div class="hint">WASD pan · QE orbit · ZC up/down · Scroll zoom · [/] layers · X mode · P pause · M materials · Tab 2D/3D</div>
   <div id="toolbarWrap" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;z-index:15">
     <button id="toolbarToggle" onclick="toggleToolbar()" style="pointer-events:all;width:28px;height:16px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(10,10,18,.85);color:rgba(255,255,255,.3);cursor:pointer;font-size:8px;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0" title="Toggle materials (M)">&#x25BC;</button>
     <div class="toolbar" id="toolbar" style="pointer-events:all"></div>
   </div>
 </div>
 <script>
-const Ty={STONE:0,BRICK:1,WOOD:2,GLASS:3,GRASS:4,SAND:5,METAL:6,GLOW:7,WATER:8,LAVA:9,FIRE:10,CONCRETE:11,DRYWALL:12,CARPET:13,TILE:14,FABRIC:15,PLASTER:16,DOORPNL:17,DOORFRM:18,STAIRWL:19,RAILING:20,THRESHD:21};
+const Ty={STONE:0,BRICK:1,WOOD:2,GLASS:3,GRASS:4,SAND:5,METAL:6,GLOW:7,WATER:8,LAVA:9,FIRE:10,CONCRETE:11,DRYWALL:12,CARPET:13,TILE:14,FABRIC:15,PLASTER:16,DOOR:17,STAIRWL:18,RAILING:19,THRESHD:20};
 const BLOCKS=[
   {name:'STONE',   color:0x8a9bae,emissive:0x000000,flamm:1,maxHP:100},
   {name:'BRICK',   color:0xc75b3a,emissive:0x100000,flamm:1,maxHP:120},
@@ -401,11 +462,10 @@ const BLOCKS=[
   {name:'TILE',    color:0xd4d8dc,emissive:0x000000,flamm:0,maxHP:90},
   {name:'FABRIC',  color:0xa67c52,emissive:0x030100,flamm:2,maxHP:10},
   {name:'PLASTR',  color:0xe8e4db,emissive:0x000000,flamm:1,maxHP:45},
-  {name:'DOORPN',  color:0x7a5c3a,emissive:0x020100,flamm:2,maxHP:35},   // door leaf panel
-  {name:'DOORFR',  color:0x604830,emissive:0x010100,flamm:2,maxHP:50},   // door frame surround
-  {name:'STAIRW',  color:0xa08a6a,emissive:0x020100,flamm:2,maxHP:55},   // stairwell block (custom geo)
-  {name:'RAILNG',  color:0x888888,emissive:0x080808,flamm:0,maxHP:80},   // railing bars
-  {name:'THRSHD',  color:0x706050,emissive:0x000000,flamm:0,maxHP:100},  // threshold/entrance step
+  {name:'DOOR',    color:0x9a7548,emissive:0x0a0500,flamm:2,maxHP:50,isDoor:true},
+  {name:'STAIRW',  color:0xa08a6a,emissive:0x020100,flamm:2,maxHP:55},
+  {name:'RAILNG',  color:0x888888,emissive:0x080808,flamm:0,maxHP:80},
+  {name:'THRSHD',  color:0x706050,emissive:0x000000,flamm:0,maxHP:100},
 ];
 let selectedBlock=0,mode='place',currentLayer=0,viewMode='standard';
 const GRID=64,SCALE=0.25,placed=new Map(),fires=new Set(),falling=[];
@@ -425,7 +485,7 @@ const FULL=1.0;    // full cell fill
 function getDims(type,gx,gy,gz){
   const has=(dx,dy,dz)=>placed.has(K(gx+dx,gy+dy,gz+dz));
   const tAt=(dx,dy,dz)=>{const e=placed.get(K(gx+dx,gy+dy,gz+dz));return e?e.type:-1;};
-  const wallTypes=new Set([Ty.STONE,Ty.BRICK,Ty.GLASS,Ty.WOOD,Ty.CONCRETE,Ty.DRYWALL,Ty.PLASTER,Ty.DOORFRM]);
+  const wallTypes=new Set([Ty.STONE,Ty.BRICK,Ty.GLASS,Ty.WOOD,Ty.CONCRETE,Ty.DRYWALL,Ty.PLASTER]);
   const isWallNbr=(dx,dy,dz)=>wallTypes.has(tAt(dx,dy,dz));
 
   // Horizontal same-type or wall-type neighbors
@@ -546,6 +606,7 @@ function rebuildGeo(key){
   e.mesh.geometry=new THREE.BoxGeometry(d[0],d[1],d[2]);
   e.mesh.position.y=e.gy+d[1]/2;
   e.dims=d;
+  e.mesh.rotation.y=0;
   applyView(e);
 }
 function rebuildNbrs(gx,gy,gz){
@@ -554,7 +615,7 @@ function rebuildNbrs(gx,gy,gz){
 }
 
 // ===== VIEW MODES =====
-function setView(vm){viewMode=vm;document.querySelectorAll('.vm-btn').forEach(b=>b.classList.toggle('active',b.dataset.vm===vm));applyViewAll();}
+function setView(vm){viewMode=vm;document.querySelectorAll('.vm-btn').forEach(b=>b.classList.toggle('active',b.dataset.vm===vm));applyViewAll();if(dimMode==='2d')draw2d();}
 function applyViewAll(){
   switch(viewMode){
     case'standard':scene.fog=new THREE.FogExp2(0x0a0a0f,.006);scene.background.setHex(0x0a0a0f);ambL.color.setHex(0x334466);ambL.intensity=.5;dirL.intensity=1.2;dirL.color.setHex(0xffeedd);filL.intensity=.3;filL.color.setHex(0x5577cc);hemL.intensity=.4;break;
@@ -584,7 +645,7 @@ function applyView(entry){
 // ===== TOOLBAR =====
 const toolbar=document.getElementById('toolbar');
 BLOCKS.forEach((b,i)=>{const btn=document.createElement('button');btn.className='block-btn'+(i===0?' active':'')+(b.isFire?' fire-btn':'');const c='#'+b.color.toString(16).padStart(6,'0');btn.innerHTML='<div class="swatch" style="background:'+(b.isFire?'':c)+'"></div><span>'+b.name+'</span>';btn.onclick=()=>{document.querySelectorAll('.block-btn').forEach(x=>x.classList.remove('active'));btn.classList.add('active');selectedBlock=i;setMode('place');};toolbar.appendChild(btn);});
-function setMode(m){mode=m;document.querySelectorAll('.mode-btn2').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));document.getElementById('s-mode').textContent=m==='place'?'Place':'Erase';}
+function setMode(m){mode=m;document.querySelectorAll('.mode-sw-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));document.getElementById('s-mode').textContent=m==='place'?'Place':'Erase';}
 function toggleToolbar(){
   const tb=document.getElementById('toolbar');
   const btn=document.getElementById('toolbarToggle');
@@ -598,21 +659,38 @@ let buildTool='pen'; // pen, line, rect, wall, room, flood
 let toolAnchor=null; // {gx,gz} first click point for 2-click tools
 const WALL_H_TOOL=3; // wall height for auto-wall tools
 const TOOL_DESCS={
-  pen:'Pen: click/drag to place or erase',
-  line:'Line: click start → end (place or erase)',
-  rect:'Rect: click corner → corner (fill or clear)',
-  wall:'Wall: click start → end (full height place/erase)',
-  room:'Room: click corner → corner (build or demolish)',
-  flood:'Fill: click to fill empty / erase connected same-type',
-  replace:'Replace: click a block → replaces connected same-type with selected material',
-  replall:'Replace All: click a block → replaces ALL of that type on this layer'
+  pen:['Pen','Click or drag to place/erase individual blocks.',['LMB','place/erase','RMB','always erase']],
+  line:['Line','Click start point, then click endpoint to draw a straight line of blocks.',['LMB','set points','RMB','cancel','Esc','cancel']],
+  rect:['Rect','Click one corner, then the opposite corner to fill or clear a rectangle.',['LMB','set corners','RMB','cancel']],
+  wall:['Wall','Click start → end to build a full-height wall (3 blocks) with a floor slab.',['LMB','set points','RMB','cancel']],
+  room:['Room','Click two opposite corners to build a room with 4 walls, a floor, and auto-placed doors.',['LMB','set corners','RMB','cancel']],
+  flood:['Fill','Click empty space to flood-fill with selected material. In erase mode, erases connected same-type blocks.',['LMB','fill/erase']],
+  replace:['Replace','Click any block to swap all connected blocks of the same type to the selected material.',['LMB','replace']],
+  replall:['Replace All','Click any block to swap every block of that type on the current layer.',['LMB','replace all']]
 };
 
 function setTool(t){
   buildTool=t;toolAnchor=null;
-  document.querySelectorAll('.tool-btn').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));
-  document.getElementById('toolInfo').textContent=TOOL_DESCS[t]||'';
+  document.querySelectorAll('.tg-btn').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));
+  resetToolInfo();
   if(dimMode==='2d') draw2d();
+}
+function resetToolInfo(){
+  const d=TOOL_DESCS[buildTool];
+  if(!d) return;
+  const keys=d[2];
+  let keysHtml='';
+  for(let i=0;i<keys.length;i+=2) keysHtml+='<span class="td-key">'+keys[i]+'</span> '+keys[i+1]+' ';
+  document.getElementById('toolInfo').innerHTML=
+    '<div class="td-name">'+d[0]+'</div>'+
+    '<div class="td-desc">'+d[1]+'</div>'+
+    '<div class="td-keys">'+keysHtml+'</div>';
+}
+function setToolInfoMsg(msg){
+  const d=TOOL_DESCS[buildTool];
+  document.getElementById('toolInfo').innerHTML=
+    '<div class="td-name">'+d[0]+'</div>'+
+    '<div class="td-desc">'+msg+'</div>';
 }
 
 // Get cells along a line (Bresenham)
@@ -731,12 +809,12 @@ function execRoomPlace(x0,z0,x1,z1,baseY){
   const midX=Math.round((mnx+mxx)/2), midZ=Math.round((mnz+mxz)/2);
   const doorPositions=[[midX,mnz],[midX,mxz],[mnx,midZ],[mxx,midZ]];
   for(const[dx,dz]of doorPositions){
-    const dk=K(dx,baseY+1,dz);
-    if(placed.has(dk)){const e=placed.get(dk);scene.remove(e.mesh);e.mesh.geometry.dispose();e.mesh.material.dispose();placed.delete(dk);}
-    addBlock(dx,baseY+1,dz,Ty.DOORFRM);
-    const dk2=K(dx,baseY+2,dz);
-    if(placed.has(dk2)){const e=placed.get(dk2);scene.remove(e.mesh);e.mesh.geometry.dispose();e.mesh.material.dispose();placed.delete(dk2);}
-    addBlock(dx,baseY+2,dz,Ty.DOORPNL);
+    // Remove wall blocks at door opening (h=1 and h=2), keep h=3 as lintel
+    for(let h=1;h<=2;h++){
+      const dk=K(dx,baseY+h,dz);
+      if(placed.has(dk)){const e=placed.get(dk);scene.remove(e.mesh);e.mesh.geometry.dispose();e.mesh.material.dispose();placed.delete(dk);}
+    }
+    addBlock(dx,baseY+1,dz,Ty.DOOR);
   }
   selectedBlock=prev;
   for(let x=mnx;x<=mxx;x++) for(let z=mnz;z<=mxz;z++) for(let h=0;h<=WALL_H_TOOL;h++) rebuildGeo(K(x,baseY+h,z));
@@ -830,7 +908,7 @@ function toolClick2D(gx,gz){
   if(!toolAnchor){
     toolAnchor={gx,gz};
     const verb=erasing?'erase to':'place to';
-    document.getElementById('toolInfo').textContent=TOOL_DESCS[buildTool].split(':')[0]+': click endpoint ('+verb+')...';
+    setToolInfoMsg('click endpoint ('+verb+')...');
     draw2d();
     return true;
   }
@@ -852,7 +930,7 @@ function toolClick2D(gx,gz){
     erasing?execRoomErase(ax,az,gx,gz,currentLayer):execRoomPlace(ax,az,gx,gz,currentLayer);
   }
 
-  document.getElementById('toolInfo').textContent=TOOL_DESCS[buildTool];
+  resetToolInfo();
   return true;
 }
 
@@ -932,6 +1010,7 @@ function updateP(dt){let a=0;for(let i=0;i<pN;i++){pLf[i]-=dt;if(pLf[i]<=0)conti
 
 // ===== STAIR GEOMETRY =====
 // Creates a stepped block: S steps rising from z=-d/2 to z=+d/2, total height = rise
+// Door geometry is a plain BoxGeometry, oriented by getDims like all other blocks
 function createStairGeo(rise,S){
   S=S||4;
   const w=0.96,d=0.96;
@@ -964,11 +1043,14 @@ function addBlock(gx,gy,gz,bType,extra){
   const b=BLOCKS[selectedBlock];
   const isStair=selectedBlock===Ty.STAIRWL;
   const stairRise=(extra&&extra.rise)||1.0;
-  const stairDir=(extra&&extra.dir)||0; // 0=Z, 1=X
+  const stairDir=(extra&&extra.dir)||0;
   const dims=isStair?[1,stairRise,1]:getDims(selectedBlock,gx,gy,gz);
-  const geo=isStair?createStairGeo(stairRise):new THREE.BoxGeometry(dims[0],dims[1],dims[2]);
+  let geo;
+  if(isStair) geo=createStairGeo(stairRise);
+  else geo=new THREE.BoxGeometry(dims[0],dims[1],dims[2]);
   let mat;
   if(b.isFire)mat=new THREE.MeshStandardMaterial({color:0xff4400,emissive:0xff3300,emissiveIntensity:1.2,transparent:true,opacity:.5,roughness:.3});
+  else if(b.isDoor)mat=new THREE.MeshStandardMaterial({color:0x9a7548,emissive:0x0a0500,emissiveIntensity:.08,roughness:.38,metalness:.01,side:THREE.DoubleSide});
   else{
     let rough=.7,metal=.05;
     if(b.name==='METAL'||b.name==='RAILNG'){rough=.3;metal=.8;}
@@ -976,14 +1058,13 @@ function addBlock(gx,gy,gz,bType,extra){
     else if(b.name==='TILE'){rough=.2;metal=.05;}
     else if(b.name==='CARPET'||b.name==='FABRIC'){rough=1;metal=0;}
     else if(b.name==='DRYWL'||b.name==='PLASTR'){rough=.9;metal=0;}
-    else if(b.name==='DOORPN'){rough=.6;metal=0;}
-    else if(b.name==='DOORFR'){rough=.7;metal=0;}
+    else if(b.name==='DOOR'){rough=.4;metal=0;}
     else if(b.name==='STAIRW'){rough=.6;metal=0;}
     mat=new THREE.MeshStandardMaterial({color:b.color,emissive:b.emissive||0,emissiveIntensity:b.emissiveI||0,roughness:rough,metalness:metal,transparent:!!b.opacity,opacity:b.opacity||1});
   }
   const mesh=new THREE.Mesh(geo,mat);
   mesh.position.set(gx,isStair?gy:gy+dims[1]/2,gz);
-  if(isStair&&stairDir===1) mesh.rotation.y=-Math.PI/2; // rotate for X-run
+  if(isStair&&stairDir===1) mesh.rotation.y=-Math.PI/2;
   mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);
   const entry={mesh,type:selectedBlock,hp:b.maxHP,maxHP:b.maxHP,onFire:false,fireTick:0,integrity:1,gx,gy,gz,origColor:b.color,dims,stairRise,stairDir};
   placed.set(key,entry);applyView(entry);
@@ -1312,6 +1393,138 @@ function openImport(){document.getElementById('importModal').classList.add('open
 function closeImport(){document.getElementById('importModal').classList.remove('open');}
 document.getElementById('importModal').addEventListener('click',function(e){if(e.target===this)closeImport();});
 
+// ===== JSON EXPORT =====
+function openExport(){
+  const json=generateExportJSON();
+  const ta=document.getElementById('jsonOutput');
+  ta.value=JSON.stringify(json,null,2);
+  const info=document.getElementById('exportInfo');
+  const g=json.building.grid;
+  const nFloors=g.length, cols=g[0]?g[0][0].length:0, rows=g[0]?g[0].length:0;
+  info.textContent=nFloors+' floor'+(nFloors>1?'s':'')+' · '+cols+'×'+rows+' · '+placed.size+' blocks';
+  document.getElementById('exportModal').classList.add('open');
+}
+function closeExport(){document.getElementById('exportModal').classList.remove('open');}
+document.getElementById('exportModal').addEventListener('click',function(e){if(e.target===this)closeExport();});
+
+function copyExport(){
+  const ta=document.getElementById('jsonOutput');
+  ta.select();document.execCommand('copy');
+  document.getElementById('exportInfo').textContent='Copied to clipboard!';
+  setTimeout(()=>{const g=JSON.parse(ta.value).building.grid;
+    document.getElementById('exportInfo').textContent=g.length+' floors copied';},1500);
+}
+function downloadExport(){
+  const ta=document.getElementById('jsonOutput');
+  const blob=new Blob([ta.value],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='building-export.json';a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('exportInfo').textContent='Downloaded!';
+}
+
+function generateExportJSON(){
+  if(placed.size===0) return {building:{name:'Empty',grid:[],room_labels:{}}};
+
+  // Find bounding box
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity,minZ=Infinity,maxZ=-Infinity;
+  for(const[,e]of placed){
+    const gx=Math.round(e.gx),gy=Math.round(e.gy),gz=Math.round(e.gz);
+    if(gx<minX)minX=gx;if(gx>maxX)maxX=gx;
+    if(gy<minY)minY=gy;if(gy>maxY)maxY=gy;
+    if(gz<minZ)minZ=gz;if(gz>maxZ)maxZ=gz;
+  }
+
+  const WALL_H=3;
+  const FLOOR_H=WALL_H+1; // 4 layers per floor
+  const numFloors=Math.ceil((maxY-minY+1)/FLOOR_H);
+  const cols=maxX-minX+1, rows=maxZ-minZ+1;
+
+  // Block type name mapping for export
+  const typeNames={};
+  typeNames[Ty.STONE]='wall';typeNames[Ty.BRICK]='wall';typeNames[Ty.CONCRETE]='wall';
+  typeNames[Ty.DRYWALL]='wall';typeNames[Ty.PLASTER]='floor';
+  typeNames[Ty.WOOD]='floor';typeNames[Ty.CARPET]='floor';typeNames[Ty.TILE]='floor';
+  typeNames[Ty.GLASS]='window';
+  typeNames[Ty.DOOR]='door';typeNames[Ty.THRESHD]='door';
+  typeNames[Ty.STAIRWL]='stairwell';
+  typeNames[Ty.RAILING]='stairwell';
+  typeNames[Ty.METAL]='wall';typeNames[Ty.FABRIC]='floor';
+  typeNames[Ty.FIRE]='floor';typeNames[Ty.GLOW]='floor';
+  typeNames[Ty.WATER]='floor';typeNames[Ty.LAVA]='floor';
+  typeNames[Ty.GRASS]='floor';typeNames[Ty.SAND]='floor';
+
+  // For each floor, build a 2D grid by scanning all blocks in that floor's Y range
+  const grid=[];
+  for(let f=0;f<numFloors;f++){
+    const baseY=minY+f*FLOOR_H;
+    const floorGrid=[];
+    for(let r=0;r<rows;r++){
+      const row=[];
+      for(let c=0;c<cols;c++){
+        const gx=minX+c, gz=minZ+r;
+        // Scan all Y levels in this floor for this column
+        let cellType='floor'; // default
+        let hasWall=false,hasDoor=false,hasWindow=false,hasStair=false,hasBlock=false;
+        for(let dy=0;dy<FLOOR_H;dy++){
+          // Check integer and nearby fractional positions
+          for(const yOff of[0,0.08,0.1,0.15,0.33,0.5,0.66]){
+            const key=K(gx,baseY+dy+yOff,gz);
+            const e=placed.get(key);
+            if(!e) continue;
+            hasBlock=true;
+            const tn=typeNames[e.type]||'floor';
+            if(tn==='wall') hasWall=true;
+            if(tn==='door') hasDoor=true;
+            if(tn==='window') hasWindow=true;
+            if(tn==='stairwell') hasStair=true;
+          }
+        }
+        // Also check by scanning nearby entries (handles any fractional Y)
+        for(const[,e]of placed){
+          if(Math.round(e.gx)===gx&&Math.round(e.gz)===gz&&e.gy>=baseY&&e.gy<baseY+FLOOR_H){
+            hasBlock=true;
+            const tn=typeNames[e.type]||'floor';
+            if(tn==='wall') hasWall=true;
+            if(tn==='door') hasDoor=true;
+            if(tn==='window') hasWindow=true;
+            if(tn==='stairwell') hasStair=true;
+          }
+        }
+        // Priority: stair > door > window > wall > floor > empty
+        if(hasStair) cellType='stairwell';
+        else if(hasDoor) cellType='door';
+        else if(hasWindow) cellType='window';
+        else if(hasWall) cellType='wall';
+        else if(hasBlock) cellType='floor';
+        else cellType='floor'; // empty cells become floor (open space)
+        row.push(cellType);
+      }
+      floorGrid.push(row);
+    }
+    grid.push(floorGrid);
+  }
+
+  // Export room labels
+  const roomLabels={};
+  for(const rl of roomLabels2D){
+    const rx=rl.x-minX, rz=rl.z-minZ;
+    const rf=Math.floor((rl.y-minY)/FLOOR_H);
+    roomLabels[rx+','+rz+','+rf]=rl.text;
+  }
+
+  return {building:{
+    name:'Exported Building',
+    floors:numFloors,
+    width:cols,
+    height:rows,
+    grid:grid,
+    room_labels:roomLabels,
+    materials:{wall:'brick',floor:'wood',door:'wood',window:'glass',stair:'wood',ceiling:'wood'}
+  }};
+}
+
 const SAMPLE_JSON={"building":{"name":"Basic 2-Story House","floors":2,"width":16,"height":12,"grid":[[["wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall"],["wall","floor","floor","floor","floor","floor","wall","floor","floor","floor","floor","floor","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","wall","floor","floor","floor","floor","floor","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","door","floor","floor","floor","floor","floor","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","wall","wall","wall","wall","wall","wall","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","wall","floor","floor","floor","wall"],["wall","wall","wall","door","wall","wall","wall","floor","floor","floor","floor","wall","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","wall","stair","stair","floor","wall"],["wall","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","wall","stair","stair","floor","wall"],["wall","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","wall","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","wall"],["wall","wall","wall","wall","wall","window","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall"]],[["wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall"],["wall","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","wall","wall","wall","door","wall","wall","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","wall","floor","floor","floor","floor","wall","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","wall","floor","floor","floor","floor","wall","floor","floor","floor","wall"],["wall","wall","wall","wall","door","wall","wall","floor","floor","floor","floor","wall","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","wall","stair","stair","floor","wall"],["wall","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","wall","stair","stair","floor","wall"],["wall","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","wall"],["wall","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","floor","wall"],["wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","wall","window","wall","wall","wall"]]],"room_labels":{"3,3,0":"Living room","3,9,0":"Garage","9,2,0":"Kitchen","13,6,0":"Dining room","3,2,1":"Master bedroom","3,9,1":"Bedroom 2","8,4,1":"Bathroom","13,2,1":"Bedroom 3"},"materials":{"wall":"brick","floor":"wood","door":"wood","window":"glass","stair":"wood","ceiling":"wood"}}};
 
 function loadSampleJSON(){
@@ -1411,12 +1624,11 @@ function parseFloorplanJSON(json){
           case 'carpet':{blocks.push([bx,baseY,bz,Ty.CONCRETE]);blocks.push([bx,baseY+0.1,bz,Ty.CARPET]);break;}
           case 'tile':{blocks.push([bx,baseY,bz,Ty.CONCRETE]);blocks.push([bx,baseY+0.1,bz,Ty.TILE]);break;}
           case 'door':case 'entrance':case 'exit':{
-            blocks.push([bx,baseY,bz,Ty.CONCRETE]);
+            blocks.push([bx,baseY,bz,Ty.CONCRETE]); // floor slab
             blocks.push([bx,baseY+0.08,bz,Ty.THRESHD]);
-            blocks.push([bx,baseY+1,bz,Ty.DOORFRM]);
-            const dp=resolveMat(mat,'door',mats);
-            blocks.push([bx,baseY+2,bz,(dp===Ty.METAL)?Ty.METAL:Ty.DOORPNL]);
-            blocks.push([bx,baseY+WALL_H,bz,isPerimeter?Ty.CONCRETE:Ty.DOORFRM]);
+            blocks.push([bx,baseY+1,bz,Ty.DOOR]); // 2 blocks tall (Y+1 to Y+2)
+            // Fill above door with wall material (lintel)
+            if(WALL_H>=3) blocks.push([bx,baseY+3,bz,isPerimeter?wallMat:(resolveMat(mat,'wall',mats)||Ty.CONCRETE)]);
             if(cell==='entrance'||cell==='exit'){
               if(row===0)blocks.push([bx,baseY+0.08,bz-1,Ty.THRESHD]);
               else if(row===numRows-1)blocks.push([bx,baseY+0.08,bz+1,Ty.THRESHD]);
@@ -1623,11 +1835,12 @@ function smoothCam(){
 function camOrbit(dTh,dPh){cThTarget+=dTh;cPhTarget=Math.max(.04,Math.min(Math.PI*.88,cPhTarget+dPh));}
 function camZoom(d){cDTarget=Math.max(3,Math.min(200,cDTarget+d));}
 function camPan(dx,dz){
-  const fw=new THREE.Vector3(-Math.sin(cTh),0,-Math.cos(cTh)); // forward on XZ plane
-  const rt=new THREE.Vector3(-Math.cos(cTh),0,Math.sin(cTh));  // right on XZ plane
+  // Same camera-perspective math as WASD: forward=(-cos(cTh),-sin(cTh)), right=(sin(cTh),-cos(cTh))
   const speed=cDTarget*.08;
-  cTgtTarget.add(rt.multiplyScalar(dx*speed));
-  cTgtTarget.add(fw.multiplyScalar(dz*speed));
+  const fX=-Math.cos(cTh), fZ=-Math.sin(cTh);
+  const rX=Math.sin(cTh), rZ=-Math.cos(cTh);
+  cTgtTarget.x+=rX*dx*speed+fX*dz*speed;
+  cTgtTarget.z+=rZ*dx*speed+fZ*dz*speed;
 }
 function camReset(){
   cThTarget=Math.PI/4;cPhTarget=Math.PI/4.5;cDTarget=55;
@@ -1735,7 +1948,7 @@ window.addEventListener('keydown',e=>{
   if(e.key==='m'&&!e.ctrlKey&&!e.metaKey) toggleToolbar();
   if(e.key==='p'&&!e.ctrlKey&&!e.metaKey) togglePhysics();
   if(e.key==='Tab'&&!e.ctrlKey&&!e.metaKey){e.preventDefault();setDim(dimMode==='3d'?'2d':'3d');}
-  if(e.key==='Escape'){toolAnchor=null;document.getElementById('toolInfo').textContent=TOOL_DESCS[buildTool];if(dimMode==='2d')draw2d();}
+  if(e.key==='Escape'){toolAnchor=null;resetToolInfo();if(dimMode==='2d')draw2d();}
   if(e.key==='x'&&!e.ctrlKey&&!e.metaKey) setMode(mode==='place'?'erase':'place'); // X toggles mode
   if(e.key==='['&&!e.ctrlKey) layerStep(-1); // [ = layer down
   if(e.key===']'&&!e.ctrlKey) layerStep(1);  // ] = layer up
@@ -1780,46 +1993,42 @@ window.addEventListener('visibilitychange',()=>{if(document.hidden)resetInputSta
 document.addEventListener('mouseleave',()=>{orbiting=false;panning=false;paint2=false;erase2=false;pan2Drag=false;});
 
 function processKeys(){
-  // Don't process movement keys if a UI element is focused
   const ae=document.activeElement;
   if(ae&&ae.tagName!=='BODY'&&ae.tagName!=='CANVAS'&&ae!==document.documentElement) return;
-  // 3D camera controls
+
   if(dimMode==='3d'){
-    const speed=cD*.015;
-    if(keysDown.has('w')||keysDown.has('arrowup')){
-      const fw=new THREE.Vector3(-Math.sin(cTh),0,-Math.cos(cTh));
-      cTgtTarget.add(fw.multiplyScalar(speed));
-    }
-    if(keysDown.has('s')||keysDown.has('arrowdown')){
-      const fw=new THREE.Vector3(-Math.sin(cTh),0,-Math.cos(cTh));
-      cTgtTarget.add(fw.multiplyScalar(-speed));
-    }
-    if(keysDown.has('a')||keysDown.has('arrowleft')){
-      if(keysDown.has('shift')){
-        const rt=new THREE.Vector3(-Math.cos(cTh),0,Math.sin(cTh));
-        cTgtTarget.add(rt.multiplyScalar(-speed));
-      }else{
-        cThTarget-=.03;
-      }
-    }
-    if(keysDown.has('d')||keysDown.has('arrowright')){
-      if(keysDown.has('shift')){
-        const rt=new THREE.Vector3(-Math.cos(cTh),0,Math.sin(cTh));
-        cTgtTarget.add(rt.multiplyScalar(speed));
-      }else{
-        cThTarget+=.03;
-      }
-    }
-    if(keysDown.has('q')) cPhTarget=Math.max(.05,cPhTarget-.02);
-    if(keysDown.has('e')) cPhTarget=Math.min(Math.PI/2-.05,cPhTarget+.02);
-    if(keysDown.has('=')||keysDown.has('+')) cDTarget=Math.max(3,cDTarget*.98);
-    if(keysDown.has('-')||keysDown.has('_')) cDTarget=Math.min(200,cDTarget*1.02);
-    if(keysDown.has(' ')){cTgtTarget.y+=speed*.5;}
-    if(keysDown.has('c')){cTgtTarget.y-=speed*.5;}
+    const panSpeed=cD*.012;
+    const orbitSpeed=0.025;
+
+    // Camera offset from target (from updCam): x=sin(cPh)*cos(cTh), z=sin(cPh)*sin(cTh)
+    // Forward (into screen) = negative of that offset projected onto XZ, normalized
+    // Simplifies to: fwd = (-cos(cTh), -sin(cTh))
+    const fX=-Math.cos(cTh), fZ=-Math.sin(cTh); // forward
+    const rX=Math.sin(cTh), rZ=-Math.cos(cTh);   // right (90° CW from forward)
+
+    // W=forward (into screen), S=backward, A=left, D=right
+    if(keysDown.has('w')||keysDown.has('arrowup')){cTgtTarget.x+=fX*panSpeed;cTgtTarget.z+=fZ*panSpeed;}
+    if(keysDown.has('s')||keysDown.has('arrowdown')){cTgtTarget.x-=fX*panSpeed;cTgtTarget.z-=fZ*panSpeed;}
+    if(keysDown.has('a')||keysDown.has('arrowleft')){cTgtTarget.x-=rX*panSpeed;cTgtTarget.z-=rZ*panSpeed;}
+    if(keysDown.has('d')||keysDown.has('arrowright')){cTgtTarget.x+=rX*panSpeed;cTgtTarget.z+=rZ*panSpeed;}
+
+    // QE = orbit
+    if(keysDown.has('q')) cThTarget-=orbitSpeed;
+    if(keysDown.has('e')) cThTarget+=orbitSpeed;
+
+    // ZC / Space = vertical
+    if(keysDown.has('z')||keysDown.has(' ')) cTgtTarget.y+=panSpeed*.4;
+    if(keysDown.has('c')) cTgtTarget.y-=panSpeed*.4;
+
+    // +/- = zoom
+    if(keysDown.has('=')||keysDown.has('+')) cDTarget=Math.max(3,cDTarget*0.985);
+    if(keysDown.has('-')||keysDown.has('_')) cDTarget=Math.min(200,cDTarget*1.015);
   }
-  // 2D pan/zoom with keyboard
+
   if(dimMode==='2d'){
-    const sp=4;let moved=false;
+    // W=up on screen, S=down, A=left, D=right — matches screen direction
+    const sp=Math.max(2,200/zoom2);
+    let moved=false;
     if(keysDown.has('w')||keysDown.has('arrowup')){panY+=sp;moved=true;}
     if(keysDown.has('s')||keysDown.has('arrowdown')){panY-=sp;moved=true;}
     if(keysDown.has('a')||keysDown.has('arrowleft')){panX+=sp;moved=true;}
@@ -1916,9 +2125,11 @@ function updateStats(){
   const sortedLayers=[...layerCounts.entries()].sort((a,b)=>b[0]-a[0]);
   const maxCt=sortedLayers.length?Math.max(...sortedLayers.map(l=>l[1])):1;
 
-  // Update nav display
+  // Update nav display + tools layer strip
   document.getElementById('lyNavY').textContent='Y'+currentLayer;
   document.getElementById('lyNavM').textContent=(currentLayer*SCALE).toFixed(2)+'m';
+  document.getElementById('lyStripY').textContent='Y'+currentLayer;
+  document.getElementById('lyStripM').textContent=(currentLayer*SCALE).toFixed(2)+'m';
   const slider=document.getElementById('lySlider');
   if(placed.size>0){
     slider.min=Math.max(0,minY);slider.max=maxY+2;
@@ -2054,7 +2265,7 @@ const BLOCK_COLORS={
   8:'#3a8fd4',9:'#ff4422',10:'#ff6600',
   11:'#999994',12:'#d9d2c4',13:'#8b6e5a',14:'#d4d8dc',
   15:'#a67c52',16:'#e8e4db',
-  17:'#7a5c3a',18:'#604830',19:'#a08a6a',20:'#888888',21:'#706050'
+  17:'#9a7548',18:'#a08a6a',19:'#888888',20:'#706050'
 };
 const BLOCK_COLORS_GHOST={
   0:'rgba(138,155,174,.15)',1:'rgba(199,91,58,.15)',2:'rgba(176,132,86,.15)',3:'rgba(125,216,232,.12)',
@@ -2062,7 +2273,7 @@ const BLOCK_COLORS_GHOST={
   8:'rgba(58,143,212,.12)',9:'rgba(255,68,34,.15)',10:'rgba(255,102,0,.15)',
   11:'rgba(153,153,148,.12)',12:'rgba(217,210,196,.1)',13:'rgba(139,110,90,.1)',14:'rgba(212,216,220,.08)',
   15:'rgba(166,124,82,.1)',16:'rgba(232,228,219,.08)',
-  17:'rgba(122,92,58,.1)',18:'rgba(96,72,48,.1)',19:'rgba(160,138,106,.1)',20:'rgba(136,136,136,.08)',21:'rgba(112,96,80,.08)'
+  17:'rgba(154,117,72,.1)',18:'rgba(160,138,106,.1)',19:'rgba(136,136,136,.08)',20:'rgba(112,96,80,.08)'
 };
 
 function setDim(d){
@@ -2098,10 +2309,51 @@ function draw2d(){
   if(dimMode!=='2d')return;
   const W=c2d.width,H=c2d.height;
   ctx2.clearRect(0,0,W,H);
-  ctx2.fillStyle='#0c0c14';ctx2.fillRect(0,0,W,H);
+
+  // View mode color schemes for 2D
+  const vm=viewMode;
+  const bgColor=vm==='blueprint'?'#0a1428':vm==='thermal'?'#000000':vm==='wireframe'?'#020210':vm==='xray'?'#050510':'#0c0c14';
+  const gridColor=vm==='blueprint'?'rgba(34,68,170,.12)':vm==='thermal'?'rgba(255,60,0,.06)':vm==='wireframe'?'rgba(100,200,255,.06)':'rgba(255,255,255,.03)';
+  const meterColor=vm==='blueprint'?'rgba(34,68,170,.25)':vm==='thermal'?'rgba(255,80,0,.12)':vm==='wireframe'?'rgba(100,200,255,.12)':'rgba(91,240,165,.1)';
+  const meterLabelColor=vm==='blueprint'?'rgba(68,102,204,.4)':vm==='thermal'?'rgba(255,100,20,.3)':vm==='wireframe'?'rgba(100,200,255,.3)':'rgba(91,240,165,.3)';
+  const wallFillFn=(e)=>{
+    if(vm==='blueprint') return 'rgba(26,51,102,.9)';
+    if(vm==='wireframe') return 'transparent';
+    if(vm==='xray') return 'rgba(80,120,180,.2)';
+    if(vm==='thermal'){
+      if(e.onFire) return 'rgba(255,60,0,.9)';
+      if(e.integrity<.5) return 'rgba(255,120,0,.6)';
+      if(e.integrity<1) return 'rgba(200,150,0,.4)';
+      return 'rgba(40,60,120,.5)';
+    }
+    return BLOCK_COLORS[e.type]||'#888';
+  };
+  const wallStrokeFn=(e)=>{
+    if(vm==='blueprint') return 'rgba(68,102,204,.8)';
+    if(vm==='wireframe') return 'rgba(100,200,255,.6)';
+    if(vm==='xray') return 'rgba(100,150,220,.35)';
+    if(vm==='thermal'){
+      if(e.onFire) return 'rgba(255,200,50,.8)';
+      return 'rgba(60,90,160,.5)';
+    }
+    return null; // use default per-type stroke
+  };
+  const floorFillFn=(e)=>{
+    if(vm==='blueprint') return 'rgba(15,30,60,.3)';
+    if(vm==='wireframe') return 'transparent';
+    if(vm==='xray') return 'rgba(60,100,160,.08)';
+    if(vm==='thermal'){
+      if(e.onFire) return 'rgba(255,80,0,.5)';
+      return 'rgba(20,30,60,.3)';
+    }
+    return null; // use default
+  };
+  const doorClearColor=bgColor;
+
+  ctx2.fillStyle=bgColor;ctx2.fillRect(0,0,W,H);
   const t=performance.now()*.001;
   const half=GRID/2;
-  const z2=zoom2; // alias
+  const z2=zoom2;
   const wallTypes=new Set([Ty.STONE,Ty.BRICK,Ty.CONCRETE]);
   const solidTypes=new Set([Ty.STONE,Ty.BRICK,Ty.METAL,Ty.CONCRETE]);
   const partitionTypes=new Set([Ty.DRYWALL,Ty.PLASTER]);
@@ -2111,7 +2363,7 @@ function draw2d(){
   function blockAt(gx,gz){return placed.get(K(gx,currentLayer,gz));}
 
   // --- GRID LINES ---
-  ctx2.strokeStyle='rgba(255,255,255,.03)';ctx2.lineWidth=.5;
+  ctx2.strokeStyle=gridColor;ctx2.lineWidth=.5;
   for(let i=-half;i<=half;i++){
     const p1=worldToScreen2(i,-half),p2=worldToScreen2(i,half);
     ctx2.beginPath();ctx2.moveTo(p1.x,p1.y);ctx2.lineTo(p2.x,p2.y);ctx2.stroke();
@@ -2120,7 +2372,7 @@ function draw2d(){
   }
   // Meter grid
   const mStep=Math.round(1/SCALE);
-  ctx2.strokeStyle='rgba(91,240,165,.1)';ctx2.lineWidth=.8;
+  ctx2.strokeStyle=meterColor;ctx2.lineWidth=.8;
   for(let i=-half;i<=half;i+=mStep){
     const p1=worldToScreen2(i,-half),p2=worldToScreen2(i,half);
     ctx2.beginPath();ctx2.moveTo(p1.x,p1.y);ctx2.lineTo(p2.x,p2.y);ctx2.stroke();
@@ -2129,7 +2381,7 @@ function draw2d(){
   }
   // Meter labels
   if(z2>8){
-    ctx2.font='9px "JetBrains Mono",monospace';ctx2.fillStyle='rgba(91,240,165,.3)';
+    ctx2.font='9px "JetBrains Mono",monospace';ctx2.fillStyle=meterLabelColor;
     ctx2.textAlign='center';
     for(let i=-half;i<=half;i+=mStep){const m=((i+half)*SCALE).toFixed(0);const p=worldToScreen2(i,-half);ctx2.fillText(m+'m',p.x,p.y-6);}
     ctx2.textAlign='right';
@@ -2145,115 +2397,119 @@ function draw2d(){
     }
   }
 
-  // --- PASS 1: FLOOR TILES (light background for open space) ---
+  // --- PASS 1: FLOOR TILES ---
   for(const[,e]of placed){
     if(e.gy!==currentLayer)continue;
-    if(wallTypes.has(e.type)||solidTypes.has(e.type)||partitionTypes.has(e.type)||e.type===Ty.DOORPNL||e.type===Ty.DOORFRM||e.type===Ty.STAIRWL||e.type===Ty.RAILING||e.type===Ty.THRESHD)continue;
+    if(wallTypes.has(e.type)||solidTypes.has(e.type)||partitionTypes.has(e.type)||e.type===Ty.DOOR||e.type===Ty.STAIRWL||e.type===Ty.RAILING||e.type===Ty.THRESHD)continue;
     const p=worldToScreen2(e.gx,e.gz);
-    let col=BLOCK_COLORS[e.type]||'#888';
-    // Damage
-    if(e.integrity<1&&col.startsWith('#')){
-      const d=1-e.integrity;
-      const r=parseInt(col.slice(1,3),16),g=parseInt(col.slice(3,5),16),b=parseInt(col.slice(5,7),16);
-      col=`rgb(${Math.floor(r*(1-d*.5))},${Math.floor(g*(1-d*.6))},${Math.floor(b*(1-d*.4))})`;
-    }
-    ctx2.fillStyle=col;
-    // Opacity varies by type
-    const floorAlpha=e.type===Ty.GLASS?0.35:e.type===Ty.WATER?0.5:e.type===Ty.CARPET?0.45:e.type===Ty.TILE?0.4:e.type===Ty.FABRIC?0.55:0.3;
-    ctx2.globalAlpha=floorAlpha;
-    ctx2.fillRect(p.x-z2/2,p.y-z2/2,z2,z2);
-    ctx2.globalAlpha=1;
-
-    // Type overlays
-    if(e.type===Ty.GLASS&&z2>8){
-      ctx2.strokeStyle='rgba(125,216,232,.6)';ctx2.lineWidth=1;
-      const hasXnb=placed.has(K(e.gx+1,currentLayer,e.gz))||placed.has(K(e.gx-1,currentLayer,e.gz));
-      const hasZnb=placed.has(K(e.gx,currentLayer,e.gz+1))||placed.has(K(e.gx,currentLayer,e.gz-1));
-      if(hasXnb&&!hasZnb){
-        ctx2.beginPath();ctx2.moveTo(p.x-z2/2,p.y-1);ctx2.lineTo(p.x+z2/2,p.y-1);ctx2.stroke();
-        ctx2.beginPath();ctx2.moveTo(p.x-z2/2,p.y+1);ctx2.lineTo(p.x+z2/2,p.y+1);ctx2.stroke();
-      }else{
-        ctx2.beginPath();ctx2.moveTo(p.x-1,p.y-z2/2);ctx2.lineTo(p.x-1,p.y+z2/2);ctx2.stroke();
-        ctx2.beginPath();ctx2.moveTo(p.x+1,p.y-z2/2);ctx2.lineTo(p.x+1,p.y+z2/2);ctx2.stroke();
+    const ff=floorFillFn(e);
+    if(ff&&ff!=='transparent'){
+      ctx2.fillStyle=ff;
+      ctx2.globalAlpha=0.4;
+      ctx2.fillRect(p.x-z2/2,p.y-z2/2,z2,z2);
+      ctx2.globalAlpha=1;
+    }else if(!ff){
+      // Default mode: use block colors
+      let col=BLOCK_COLORS[e.type]||'#888';
+      if(e.integrity<1&&col.startsWith('#')){
+        const d=1-e.integrity;
+        const r=parseInt(col.slice(1,3),16),g=parseInt(col.slice(3,5),16),b=parseInt(col.slice(5,7),16);
+        col=`rgb(${Math.floor(r*(1-d*.5))},${Math.floor(g*(1-d*.6))},${Math.floor(b*(1-d*.4))})`;
       }
+      ctx2.fillStyle=col;
+      const floorAlpha=e.type===Ty.GLASS?0.35:e.type===Ty.WATER?0.5:e.type===Ty.CARPET?0.45:e.type===Ty.TILE?0.4:e.type===Ty.FABRIC?0.55:0.3;
+      ctx2.globalAlpha=floorAlpha;
+      ctx2.fillRect(p.x-z2/2,p.y-z2/2,z2,z2);
+      ctx2.globalAlpha=1;
     }
-    if(e.type===Ty.WOOD&&z2>10){
-      ctx2.strokeStyle='rgba(80,50,20,.2)';ctx2.lineWidth=.5;
-      for(let li=0;li<3;li++){const ly=p.y-z2/2+z2*.25+li*z2*.25;
-        ctx2.beginPath();ctx2.moveTo(p.x-z2/2+1,ly);ctx2.lineTo(p.x+z2/2-1,ly);ctx2.stroke();}
-    }
-    if(e.type===Ty.CARPET&&z2>8){
-      // Carpet: stipple dots
-      ctx2.fillStyle='rgba(60,40,25,.2)';
-      for(let di=0;di<4;di++){const dx2=(Math.sin(e.gx*7+di*2.3)*.35)*z2,dz2=(Math.cos(e.gz*5+di*1.7)*.35)*z2;
-        ctx2.beginPath();ctx2.arc(p.x+dx2,p.y+dz2,1,0,Math.PI*2);ctx2.fill();}
-    }
-    if(e.type===Ty.TILE&&z2>8){
-      // Tile: cross grid pattern
-      ctx2.strokeStyle='rgba(180,185,195,.3)';ctx2.lineWidth=.5;
-      ctx2.beginPath();ctx2.moveTo(p.x,p.y-z2/2);ctx2.lineTo(p.x,p.y+z2/2);ctx2.stroke();
-      ctx2.beginPath();ctx2.moveTo(p.x-z2/2,p.y);ctx2.lineTo(p.x+z2/2,p.y);ctx2.stroke();
-    }
-    if(e.type===Ty.FABRIC){
-      // Fabric/upholstery: soft rounded fill with subtle shading
-      ctx2.fillStyle='rgba(166,124,82,.4)';
-      const r2=z2*.35;
-      ctx2.beginPath();ctx2.arc(p.x,p.y,r2,0,Math.PI*2);ctx2.fill();
-      if(z2>10){ctx2.strokeStyle='rgba(120,80,40,.3)';ctx2.lineWidth=.5;ctx2.stroke();}
-    }
-    if(e.type===Ty.GLOW){
-      const fl=.5+.3*Math.sin(t*3+e.gx);
-      ctx2.fillStyle=`rgba(255,209,102,${fl})`;
-      ctx2.beginPath();ctx2.arc(p.x,p.y,z2*.2,0,Math.PI*2);ctx2.fill();
+    // Type overlays (only in standard mode)
+    if(vm==='standard'){
+      if(e.type===Ty.GLASS&&z2>8){
+        ctx2.strokeStyle='rgba(125,216,232,.6)';ctx2.lineWidth=1;
+        const hasXnb=placed.has(K(e.gx+1,currentLayer,e.gz))||placed.has(K(e.gx-1,currentLayer,e.gz));
+        const hasZnb=placed.has(K(e.gx,currentLayer,e.gz+1))||placed.has(K(e.gx,currentLayer,e.gz-1));
+        if(hasXnb&&!hasZnb){
+          ctx2.beginPath();ctx2.moveTo(p.x-z2/2,p.y-1);ctx2.lineTo(p.x+z2/2,p.y-1);ctx2.stroke();
+          ctx2.beginPath();ctx2.moveTo(p.x-z2/2,p.y+1);ctx2.lineTo(p.x+z2/2,p.y+1);ctx2.stroke();
+        }else{
+          ctx2.beginPath();ctx2.moveTo(p.x-1,p.y-z2/2);ctx2.lineTo(p.x-1,p.y+z2/2);ctx2.stroke();
+          ctx2.beginPath();ctx2.moveTo(p.x+1,p.y-z2/2);ctx2.lineTo(p.x+1,p.y+z2/2);ctx2.stroke();
+        }
+      }
+      if(e.type===Ty.WOOD&&z2>10){
+        ctx2.strokeStyle='rgba(80,50,20,.2)';ctx2.lineWidth=.5;
+        for(let li=0;li<3;li++){const ly=p.y-z2/2+z2*.25+li*z2*.25;
+          ctx2.beginPath();ctx2.moveTo(p.x-z2/2+1,ly);ctx2.lineTo(p.x+z2/2-1,ly);ctx2.stroke();}
+      }
+      if(e.type===Ty.CARPET&&z2>8){
+        ctx2.fillStyle='rgba(60,40,25,.2)';
+        for(let di=0;di<4;di++){const dx2=(Math.sin(e.gx*7+di*2.3)*.35)*z2,dz2=(Math.cos(e.gz*5+di*1.7)*.35)*z2;
+          ctx2.beginPath();ctx2.arc(p.x+dx2,p.y+dz2,1,0,Math.PI*2);ctx2.fill();}
+      }
+      if(e.type===Ty.TILE&&z2>8){
+        ctx2.strokeStyle='rgba(180,185,195,.3)';ctx2.lineWidth=.5;
+        ctx2.beginPath();ctx2.moveTo(p.x,p.y-z2/2);ctx2.lineTo(p.x,p.y+z2/2);ctx2.stroke();
+        ctx2.beginPath();ctx2.moveTo(p.x-z2/2,p.y);ctx2.lineTo(p.x+z2/2,p.y);ctx2.stroke();
+      }
+      if(e.type===Ty.FABRIC){
+        ctx2.fillStyle='rgba(166,124,82,.4)';const r2=z2*.35;
+        ctx2.beginPath();ctx2.arc(p.x,p.y,r2,0,Math.PI*2);ctx2.fill();
+        if(z2>10){ctx2.strokeStyle='rgba(120,80,40,.3)';ctx2.lineWidth=.5;ctx2.stroke();}
+      }
+      if(e.type===Ty.GLOW){
+        const fl=.5+.3*Math.sin(t*3+e.gx);
+        ctx2.fillStyle=`rgba(255,209,102,${fl})`;
+        ctx2.beginPath();ctx2.arc(p.x,p.y,z2*.2,0,Math.PI*2);ctx2.fill();
+      }
     }
   }
 
   // --- PASS 2: WALLS — filled cells with connected borders ---
-  // Draw all wall cells as filled, then draw thick outlines only on exposed faces
-  const wallColor='#6B5B4F';const wallColorDark='#4A3E35';
   for(const[,e]of placed){
     if(e.gy!==currentLayer||!solidTypes.has(e.type))continue;
     const p=worldToScreen2(e.gx,e.gz);
-    // Fill the wall cell solid
-    let wc=e.type===Ty.METAL?'#7a8590':e.type===Ty.CONCRETE?'#8a8a86':e.type===Ty.STONE?'#7a8594':wallColor;
-    if(e.integrity<1){
-      const d=1-e.integrity;
-      wc=`rgb(${Math.floor(107*(1-d*.5))},${Math.floor(91*(1-d*.5))},${Math.floor(79*(1-d*.5))})`;
+    const wf=wallFillFn(e);
+    if(wf&&wf!=='transparent'){
+      ctx2.fillStyle=wf;
+      ctx2.fillRect(p.x-z2/2,p.y-z2/2,z2,z2);
     }
-    ctx2.fillStyle=wc;
-    ctx2.fillRect(p.x-z2/2,p.y-z2/2,z2,z2);
   }
-  // Now draw thick outlines only on exposed faces
-  ctx2.strokeStyle=wallColorDark;
-  const wt=Math.max(1.5,z2*0.12); // wall line thickness scales with zoom
+  // Exposed-face outlines
+  const defaultWallStroke='#4A3E35';
+  const wt=Math.max(1.5,z2*0.12);
   ctx2.lineWidth=wt;
   for(const[,e]of placed){
     if(e.gy!==currentLayer||!solidTypes.has(e.type))continue;
     const p=worldToScreen2(e.gx,e.gz);
+    ctx2.strokeStyle=wallStrokeFn(e)||defaultWallStroke;
     const x1=p.x-z2/2,y1=p.y-z2/2,x2=p.x+z2/2,y2=p.y+z2/2;
-    // Draw border only on faces NOT adjacent to another wall
-    if(!isWallAt(e.gx,e.gz-1)){ctx2.beginPath();ctx2.moveTo(x1,y1);ctx2.lineTo(x2,y1);ctx2.stroke();} // top (north)
-    if(!isWallAt(e.gx,e.gz+1)){ctx2.beginPath();ctx2.moveTo(x1,y2);ctx2.lineTo(x2,y2);ctx2.stroke();} // bottom (south)
-    if(!isWallAt(e.gx-1,e.gz)){ctx2.beginPath();ctx2.moveTo(x1,y1);ctx2.lineTo(x1,y2);ctx2.stroke();} // left (west)
-    if(!isWallAt(e.gx+1,e.gz)){ctx2.beginPath();ctx2.moveTo(x2,y1);ctx2.lineTo(x2,y2);ctx2.stroke();} // right (east)
+    if(!isWallAt(e.gx,e.gz-1)){ctx2.beginPath();ctx2.moveTo(x1,y1);ctx2.lineTo(x2,y1);ctx2.stroke();}
+    if(!isWallAt(e.gx,e.gz+1)){ctx2.beginPath();ctx2.moveTo(x1,y2);ctx2.lineTo(x2,y2);ctx2.stroke();}
+    if(!isWallAt(e.gx-1,e.gz)){ctx2.beginPath();ctx2.moveTo(x1,y1);ctx2.lineTo(x1,y2);ctx2.stroke();}
+    if(!isWallAt(e.gx+1,e.gz)){ctx2.beginPath();ctx2.moveTo(x2,y1);ctx2.lineTo(x2,y2);ctx2.stroke();}
   }
 
-  // --- PASS 2b: PARTITION WALLS (drywall, plaster) — thinner, lighter ---
+  // --- PASS 2b: PARTITION WALLS ---
   function isPartAt(gx,gz){const e=placed.get(K(gx,currentLayer,gz));return e&&(partitionTypes.has(e.type)||solidTypes.has(e.type));}
   function isAnyWallAt(gx,gz){return isWallAt(gx,gz)||isPartAt(gx,gz);}
   for(const[,e]of placed){
     if(e.gy!==currentLayer||!partitionTypes.has(e.type))continue;
     const p=worldToScreen2(e.gx,e.gz);
-    const pc=e.type===Ty.DRYWALL?'#c8c0b0':'#d8d4cc';
-    ctx2.fillStyle=pc;
+    const pf=wallFillFn(e);
+    if(vm==='standard'){
+      const pc=e.type===Ty.DRYWALL?'#c8c0b0':'#d8d4cc';
+      ctx2.fillStyle=pc;
+    }else{
+      ctx2.fillStyle=pf||'rgba(100,100,100,.3)';
+    }
     ctx2.fillRect(p.x-z2/2+1,p.y-z2/2+1,z2-2,z2-2);
   }
-  // Partition outlines (thinner than structural)
   ctx2.lineWidth=Math.max(1,z2*0.07);
   for(const[,e]of placed){
     if(e.gy!==currentLayer||!partitionTypes.has(e.type))continue;
     const p=worldToScreen2(e.gx,e.gz);
-    ctx2.strokeStyle=e.type===Ty.DRYWALL?'#a09888':'#b8b4ac';
+    const ws=wallStrokeFn(e);
+    ctx2.strokeStyle=ws||(e.type===Ty.DRYWALL?'#a09888':'#b8b4ac');
     const x1=p.x-z2/2,y1=p.y-z2/2,x2=p.x+z2/2,y2=p.y+z2/2;
     if(!isPartAt(e.gx,e.gz-1)){ctx2.beginPath();ctx2.moveTo(x1,y1);ctx2.lineTo(x2,y1);ctx2.stroke();}
     if(!isPartAt(e.gx,e.gz+1)){ctx2.beginPath();ctx2.moveTo(x1,y2);ctx2.lineTo(x2,y2);ctx2.stroke();}
@@ -2262,56 +2518,56 @@ function draw2d(){
   }
 
   // --- PASS 3: DOORS, STAIRS, RAILINGS — architectural symbols ---
-  const doorTypes=new Set([Ty.DOORPNL,Ty.DOORFRM,Ty.THRESHD]);
+  const doorTypes=new Set([Ty.DOOR,Ty.THRESHD]);
   const stairTypes=new Set([Ty.STAIRWL]);
   let drawnStairs=new Set();
   for(const[,e]of placed){
     if(e.gy!==currentLayer)continue;
 
-    // --- DOOR PANELS: proper architectural door symbol ---
-    if(e.type===Ty.DOORPNL||e.type===Ty.DOORFRM){
+    // --- DOOR: architectural plan symbol (90° open) ---
+    if(e.type===Ty.DOOR){
       const p=worldToScreen2(e.gx,e.gz);
-      // Clear wall cell
-      ctx2.fillStyle='#0c0c14';
-      ctx2.fillRect(p.x-z2/2+.5,p.y-z2/2+.5,z2-1,z2-1);
-      // Light floor fill
-      ctx2.fillStyle='rgba(112,96,80,.15)';
-      ctx2.fillRect(p.x-z2/2+.5,p.y-z2/2+.5,z2-1,z2-1);
+      const h=z2;
 
-      if(e.type===Ty.DOORPNL&&z2>5){
-        // Determine wall direction
-        const wx2=isAnyWallAt(e.gx-1,e.gz)||isAnyWallAt(e.gx+1,e.gz);
-        const wz2=isAnyWallAt(e.gx,e.gz-1)||isAnyWallAt(e.gx,e.gz+1);
-        // Door leaf line (thick, short)
-        ctx2.strokeStyle='rgba(122,92,58,.8)';ctx2.lineWidth=Math.max(2,z2*.1);
-        if(wz2){ // wall runs along Z, door opens in X
-          ctx2.beginPath();ctx2.moveTo(p.x-z2/2+1,p.y-z2*.35);ctx2.lineTo(p.x-z2/2+1,p.y+z2*.35);ctx2.stroke();
-          // Swing arc
-          if(z2>8){
-            ctx2.strokeStyle='rgba(122,92,58,.35)';ctx2.lineWidth=.8;ctx2.setLineDash([2,2]);
-            ctx2.beginPath();ctx2.arc(p.x-z2/2+1,p.y-z2*.35,z2*.7,-Math.PI*.05,Math.PI*.42);ctx2.stroke();
-            ctx2.setLineDash([]);
+      const wL=isAnyWallAt(e.gx-1,e.gz), wR=isAnyWallAt(e.gx+1,e.gz);
+      const wU=isAnyWallAt(e.gx,e.gz-1), wD=isAnyWallAt(e.gx,e.gz+1);
+      const vertical=wU||wD;
+
+      ctx2.fillStyle=doorClearColor;
+      ctx2.fillRect(p.x-h/2,p.y-h/2,h,h);
+
+      if(h>3){
+        const opening=h*.82;
+        const thick=Math.max(1.5,h*.08);
+
+        if(vertical){
+          const stub=(h-opening)/2;
+          ctx2.strokeStyle='rgba(160,140,110,.5)';ctx2.lineWidth=Math.max(1.5,h*.06);
+          if(stub>0.5){
+            ctx2.beginPath();ctx2.moveTo(p.x-h*.08,p.y-h/2);ctx2.lineTo(p.x+h*.08,p.y-h/2);ctx2.lineTo(p.x+h*.08,p.y-h/2+stub);ctx2.stroke();
+            ctx2.beginPath();ctx2.moveTo(p.x-h*.08,p.y+h/2);ctx2.lineTo(p.x+h*.08,p.y+h/2);ctx2.lineTo(p.x+h*.08,p.y+h/2-stub);ctx2.stroke();
           }
-        }else{ // wall runs along X, door opens in Z
-          ctx2.beginPath();ctx2.moveTo(p.x-z2*.35,p.y-z2/2+1);ctx2.lineTo(p.x+z2*.35,p.y-z2/2+1);ctx2.stroke();
-          if(z2>8){
-            ctx2.strokeStyle='rgba(122,92,58,.35)';ctx2.lineWidth=.8;ctx2.setLineDash([2,2]);
-            ctx2.beginPath();ctx2.arc(p.x-z2*.35,p.y-z2/2+1,z2*.7,Math.PI*.05,Math.PI*.45);ctx2.stroke();
-            ctx2.setLineDash([]);
+          const hingeY=p.y-h/2+stub;
+          ctx2.strokeStyle='rgba(160,130,80,.7)';ctx2.lineWidth=thick;
+          ctx2.beginPath();ctx2.moveTo(p.x,hingeY);ctx2.lineTo(p.x+opening,hingeY);ctx2.stroke();
+          if(h>6){
+            ctx2.strokeStyle='rgba(140,115,70,.18)';ctx2.lineWidth=.7;
+            ctx2.beginPath();ctx2.arc(p.x,hingeY,opening,0,Math.PI*.5);ctx2.stroke();
           }
-        }
-        // Frame ticks at jamb ends
-        ctx2.strokeStyle='rgba(96,72,48,.7)';ctx2.lineWidth=Math.max(1.5,z2*.06);
-        if(wz2){
-          ctx2.beginPath();ctx2.moveTo(p.x-z2/2,p.y-z2/2);ctx2.lineTo(p.x-z2/2+z2*.15,p.y-z2/2);ctx2.stroke();
-          ctx2.beginPath();ctx2.moveTo(p.x-z2/2,p.y+z2/2);ctx2.lineTo(p.x-z2/2+z2*.15,p.y+z2/2);ctx2.stroke();
-          ctx2.beginPath();ctx2.moveTo(p.x+z2/2,p.y-z2/2);ctx2.lineTo(p.x+z2/2-z2*.15,p.y-z2/2);ctx2.stroke();
-          ctx2.beginPath();ctx2.moveTo(p.x+z2/2,p.y+z2/2);ctx2.lineTo(p.x+z2/2-z2*.15,p.y+z2/2);ctx2.stroke();
         }else{
-          ctx2.beginPath();ctx2.moveTo(p.x-z2/2,p.y-z2/2);ctx2.lineTo(p.x-z2/2,p.y-z2/2+z2*.15);ctx2.stroke();
-          ctx2.beginPath();ctx2.moveTo(p.x+z2/2,p.y-z2/2);ctx2.lineTo(p.x+z2/2,p.y-z2/2+z2*.15);ctx2.stroke();
-          ctx2.beginPath();ctx2.moveTo(p.x-z2/2,p.y+z2/2);ctx2.lineTo(p.x-z2/2,p.y+z2/2-z2*.15);ctx2.stroke();
-          ctx2.beginPath();ctx2.moveTo(p.x+z2/2,p.y+z2/2);ctx2.lineTo(p.x+z2/2,p.y+z2/2-z2*.15);ctx2.stroke();
+          const stub=(h-opening)/2;
+          ctx2.strokeStyle='rgba(160,140,110,.5)';ctx2.lineWidth=Math.max(1.5,h*.06);
+          if(stub>0.5){
+            ctx2.beginPath();ctx2.moveTo(p.x-h/2,p.y-h*.08);ctx2.lineTo(p.x-h/2,p.y+h*.08);ctx2.lineTo(p.x-h/2+stub,p.y+h*.08);ctx2.stroke();
+            ctx2.beginPath();ctx2.moveTo(p.x+h/2,p.y-h*.08);ctx2.lineTo(p.x+h/2,p.y+h*.08);ctx2.lineTo(p.x+h/2-stub,p.y+h*.08);ctx2.stroke();
+          }
+          const hingeX=p.x-h/2+stub;
+          ctx2.strokeStyle='rgba(160,130,80,.7)';ctx2.lineWidth=thick;
+          ctx2.beginPath();ctx2.moveTo(hingeX,p.y);ctx2.lineTo(hingeX,p.y+opening);ctx2.stroke();
+          if(h>6){
+            ctx2.strokeStyle='rgba(140,115,70,.18)';ctx2.lineWidth=.7;
+            ctx2.beginPath();ctx2.arc(hingeX,p.y,opening,Math.PI*.5,0,true);ctx2.stroke();
+          }
         }
       }
     }
@@ -2319,13 +2575,16 @@ function draw2d(){
     // --- THRESHOLD: entrance marker ---
     if(e.type===Ty.THRESHD){
       const p=worldToScreen2(e.gx,e.gz);
-      ctx2.fillStyle='rgba(112,96,80,.35)';
-      ctx2.fillRect(p.x-z2/2+1,p.y-z2/2+1,z2-2,z2-2);
-      if(z2>10){
-        ctx2.strokeStyle='rgba(112,96,80,.5)';ctx2.lineWidth=1;
-        ctx2.setLineDash([3,2]);
-        ctx2.strokeRect(p.x-z2/2+2,p.y-z2/2+2,z2-4,z2-4);
-        ctx2.setLineDash([]);
+      const h=z2;
+      // Subtle textured fill
+      ctx2.fillStyle='rgba(112,96,80,.2)';
+      ctx2.fillRect(p.x-h/2+1,p.y-h/2+1,h-2,h-2);
+      // Double-line border (architectural threshold symbol)
+      if(h>6){
+        ctx2.strokeStyle='rgba(112,96,80,.4)';ctx2.lineWidth=1;
+        ctx2.strokeRect(p.x-h/2+2,p.y-h/2+2,h-4,h-4);
+        ctx2.strokeStyle='rgba(112,96,80,.2)';ctx2.lineWidth=.5;
+        ctx2.strokeRect(p.x-h/2+4,p.y-h/2+4,h-8,h-8);
       }
     }
 
@@ -2459,24 +2718,42 @@ function draw2d(){
       if(z2>8){ctx2.fillStyle='rgba(136,136,136,.45)';ctx2.beginPath();ctx2.arc(p.x,p.y,1.5,0,Math.PI*2);ctx2.fill();}
     }
 
-    // --- ALSO detect old WOOD-between-walls doors (backward compat) ---
+    // --- Legacy WOOD-between-walls doors (backward compat) ---
     if(e.type===Ty.WOOD){
       const wx3=isAnyWallAt(e.gx-1,e.gz)||isAnyWallAt(e.gx+1,e.gz);
       const wz3=isAnyWallAt(e.gx,e.gz-1)||isAnyWallAt(e.gx,e.gz+1);
       if(wx3||wz3){
-        const hasDoorAbove=placed.has(K(e.gx,currentLayer+1,e.gz))&&placed.get(K(e.gx,currentLayer+1,e.gz)).type===Ty.DOORPNL;
-        const hasDoorBelow=placed.has(K(e.gx,currentLayer-1,e.gz))&&placed.get(K(e.gx,currentLayer-1,e.gz)).type===Ty.DOORFRM;
+        const hasDoorAbove=placed.has(K(e.gx,currentLayer+1,e.gz))&&placed.get(K(e.gx,currentLayer+1,e.gz)).type===Ty.DOOR;
+        const hasDoorBelow=placed.has(K(e.gx,currentLayer-1,e.gz))&&placed.get(K(e.gx,currentLayer-1,e.gz)).type===Ty.DOOR;
         if(!hasDoorAbove&&!hasDoorBelow){
-          // Legacy wood door — render basic door symbol
           const p=worldToScreen2(e.gx,e.gz);
-          ctx2.fillStyle='#0c0c14';ctx2.fillRect(p.x-z2/2+.5,p.y-z2/2+.5,z2-1,z2-1);
-          ctx2.fillStyle='rgba(176,132,86,.15)';ctx2.fillRect(p.x-z2/2+.5,p.y-z2/2+.5,z2-1,z2-1);
-          if(z2>6){
-            ctx2.strokeStyle='rgba(176,132,86,.5)';ctx2.lineWidth=1;ctx2.setLineDash([2,2]);
-            const r=z2*.4;
-            if(wx3){ctx2.beginPath();ctx2.arc(p.x-z2/3,p.y,r,-.5,.8);ctx2.stroke();}
-            else{ctx2.beginPath();ctx2.arc(p.x,p.y-z2/3,r,.3,1.5);ctx2.stroke();}
-            ctx2.setLineDash([]);
+          const h=z2;
+          ctx2.fillStyle=doorClearColor;ctx2.fillRect(p.x-h/2,p.y-h/2,h,h);
+          if(h>3){
+            const opening=h*.82;const thick=Math.max(1.5,h*.08);
+            if(wz3){
+              const stub=(h-opening)/2;
+              ctx2.strokeStyle='rgba(160,140,110,.5)';ctx2.lineWidth=Math.max(1.5,h*.06);
+              if(stub>0.5){
+                ctx2.beginPath();ctx2.moveTo(p.x-h*.08,p.y-h/2);ctx2.lineTo(p.x+h*.08,p.y-h/2);ctx2.lineTo(p.x+h*.08,p.y-h/2+stub);ctx2.stroke();
+                ctx2.beginPath();ctx2.moveTo(p.x-h*.08,p.y+h/2);ctx2.lineTo(p.x+h*.08,p.y+h/2);ctx2.lineTo(p.x+h*.08,p.y+h/2-stub);ctx2.stroke();
+              }
+              const hingeY=p.y-h/2+stub;
+              ctx2.strokeStyle='rgba(160,130,80,.6)';ctx2.lineWidth=thick;
+              ctx2.beginPath();ctx2.moveTo(p.x,hingeY);ctx2.lineTo(p.x+opening,hingeY);ctx2.stroke();
+              if(h>6){ctx2.strokeStyle='rgba(140,115,70,.15)';ctx2.lineWidth=.7;ctx2.beginPath();ctx2.arc(p.x,hingeY,opening,0,Math.PI*.5);ctx2.stroke();}
+            }else{
+              const stub=(h-opening)/2;
+              ctx2.strokeStyle='rgba(160,140,110,.5)';ctx2.lineWidth=Math.max(1.5,h*.06);
+              if(stub>0.5){
+                ctx2.beginPath();ctx2.moveTo(p.x-h/2,p.y-h*.08);ctx2.lineTo(p.x-h/2,p.y+h*.08);ctx2.lineTo(p.x-h/2+stub,p.y+h*.08);ctx2.stroke();
+                ctx2.beginPath();ctx2.moveTo(p.x+h/2,p.y-h*.08);ctx2.lineTo(p.x+h/2,p.y+h*.08);ctx2.lineTo(p.x+h/2-stub,p.y+h*.08);ctx2.stroke();
+              }
+              const hingeX=p.x-h/2+stub;
+              ctx2.strokeStyle='rgba(160,130,80,.6)';ctx2.lineWidth=thick;
+              ctx2.beginPath();ctx2.moveTo(hingeX,p.y);ctx2.lineTo(hingeX,p.y+opening);ctx2.stroke();
+              if(h>6){ctx2.strokeStyle='rgba(140,115,70,.15)';ctx2.lineWidth=.7;ctx2.beginPath();ctx2.arc(hingeX,p.y,opening,Math.PI*.5,0,true);ctx2.stroke();}
+            }
           }
         }
       }
@@ -2684,7 +2961,7 @@ c2d.addEventListener('mousedown',e=>{
   }
   // RMB = erase with drag (cancels tool anchor)
   if(e.button===2){
-    if(toolAnchor){toolAnchor=null;document.getElementById('toolInfo').textContent=TOOL_DESCS[buildTool];draw2d();return;}
+    if(toolAnchor){toolAnchor=null;resetToolInfo();draw2d();return;}
     const w=screenToWorld2(e.clientX,e.clientY);
     const key=K(w.gx,currentLayer,w.gz);
     if(placed.has(key)) removeBlock(w.gx,currentLayer,w.gz);
@@ -3188,8 +3465,9 @@ let lastT=performance.now();
 let physicsPaused=false;
 function togglePhysics(){
   physicsPaused=!physicsPaused;
-  document.getElementById('physBtn').classList.toggle('active',!physicsPaused);
-  document.getElementById('physBtn').textContent=physicsPaused?'▶ Play':'⏸ Pause';
+  const el=document.getElementById('physToggle');
+  el.classList.toggle('on',!physicsPaused);
+  el.querySelector('.pb-lbl').textContent=physicsPaused?'Physics paused':'Physics running';
 }
 function animate(){requestAnimationFrame(animate);const now=performance.now(),dt=Math.min((now-lastT)/1000,.1);lastT=now;if(!physicsPaused){fTmr+=dt;if(fTmr>=FT){fTmr-=FT;tickFire();procCol();updateStats();if(dimMode==='2d')draw2d();}updFireVis(dt);updateP(dt);updFall(dt);}processKeys();smoothCam();if(simData)tickAgentLerp();if(dimMode==='3d'){const pos=getGridPos();if(pos&&mode==='place'&&!pos.erase&&!orbiting&&!panning){ghost.visible=true;ghost.position.set(pos.gx,pos.gy+.45,pos.gz);ghostMat.color.setHex(BLOCKS[selectedBlock].isFire?0xff6600:BLOCKS[selectedBlock].color);}else ghost.visible=false;renderer.render(scene,camera);}}
 animate();
