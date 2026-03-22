@@ -188,16 +188,12 @@ def equipment_edge_cost(base, nx, ny, nz, cell_props, vert_conn_map,
         return base
 
     if ct == "window":
-        if nz > 0:
-            vc  = vert_conn_map.get((nx, ny, nz))
-            req = (vc or {}).get("requires")
-            if req and req not in equipment_set:
-                return INF
+        # Ladder required only for windows above ground floor
+        if nz > 0 and "ladder" not in equipment_set:
+            return INF
         vc   = vert_conn_map.get((nx, ny, nz))
         cost = (vc or {}).get("traversal_cost", 5 + 2 * nz)
-        if "ladder" in equipment_set:
-            cost = max(1, cost - 2)
-        return cost
+        return max(1, cost - 2)  # ladder discount
 
     if ct in ("stairwell", "elevator"):
         vc = vert_conn_map.get((nx, ny, nz))

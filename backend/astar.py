@@ -101,17 +101,13 @@ def _reconstruct(came_from, current):
     return path
 
 
-def nearest_exit(graph, building, start, equipment_set, threat_penalty_map=None):
+def nearest_exit(graph, vert_conn_map, building, start, equipment_set, threat_penalty_map=None):
     """
     Find the cheapest path from start to any exit_node.
     Returns (path, cost, exit_id).
     """
     exit_nodes = building["exit_nodes"]
     best_path, best_cost, best_id = [], INF, None
-
-    # Build vert_conn_map lazily if needed
-    from graph import build_graph
-    _, vert_conn_map = build_graph(building)
 
     for en in exit_nodes:
         goal = (en["x"], en["y"], en["z"])

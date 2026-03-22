@@ -155,7 +155,7 @@ function RoomLabel({ col, row, size, text }) {
           fontSize={6.5}
           fontWeight="600"
           fontFamily="sans-serif"
-          fill="#1e3a5f"
+          fill="#b0c8e8"
           opacity={0.85}
         >
           {line}
@@ -182,7 +182,7 @@ function CellLabel({ col, row, size, text }) {
       fontSize={5.5}
       fontStyle="italic"
       fontFamily="sans-serif"
-      fill="#333"
+      fill="#aaa"
       opacity={0.9}
       pointerEvents="none"
     >
@@ -270,6 +270,23 @@ function ResponderMarker({ col, row, size, id, status }) {
         {id.replace("R", "R")}
       </text>
     </g>
+  );
+}
+
+function PathLine({ nodes, color }) {
+  if (nodes.length < 2) return null;
+  const points = nodes.map(n => `${n.cx},${n.cy}`).join(' ');
+  return (
+    <polyline
+      points={points}
+      fill="none"
+      stroke={color}
+      strokeWidth={2.5}
+      strokeDasharray="5,4"
+      strokeOpacity={0.55}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   );
 }
 
@@ -413,6 +430,24 @@ export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellP
     return [];
   }, [turnState, scenario, floorIndex]);
 
+  const responderPaths = useMemo(() => {
+    if (!turnState) return [];
+    return (turnState.responder_states ?? [])
+      .filter(r => r.status !== 'extracted' && r.current_path?.length >= 2)
+      .map(r => {
+        const color = r.status === 'carrying' ? '#00ccff' : '#3b82f6';
+        // Only draw segments where both endpoints are on this floor
+        const nodes = r.current_path
+          .filter(([, , z]) => z === floorIndex)
+          .map(([x, y]) => ({
+            cx: PADDING + x * CELL_SIZE + CELL_SIZE / 2,
+            cy: PADDING + y * CELL_SIZE + CELL_SIZE / 2,
+          }));
+        return { id: r.id, nodes, color };
+      })
+      .filter(p => p.nodes.length >= 2);
+  }, [turnState, floorIndex]);
+
   // ── Shared cell render helper ─────────────────────────────────────────────
   function renderCells() {
     return (
@@ -458,6 +493,10 @@ export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellP
           if (z !== floorIndex) return null;
           return <FireOriginMarker key="fire-origin" col={x} row={y} size={CELL_SIZE} />;
         })()}
+        {/* Responder path overlays */}
+        {responderPaths.map(p => (
+          <PathLine key={`path-${p.id}`} nodes={p.nodes} color={p.color} />
+        ))}
         {/* Agent overlays */}
         {responderMarkers.map(r => (
           <ResponderMarker key={`r-${r.id}`} col={r.col} row={r.row} size={CELL_SIZE} id={r.id} status={r.status} />
@@ -528,31 +567,31 @@ const styles = {
   },
   zoomBtn: {
     padding: "0.2rem 0.6rem", fontSize: "0.85rem",
-    border: "1px solid #ccc", borderRadius: "5px",
-    backgroundColor: "#fff", cursor: "pointer", color: "#333",
+    border: "1px solid rgba(255,255,255,0.12)", borderRadius: "5px",
+    backgroundColor: "rgba(255,255,255,0.06)", cursor: "pointer", color: "#ccc",
   },
   zoomLabel: {
-    fontSize: "0.8rem", color: "#555", minWidth: "40px", textAlign: "center",
+    fontSize: "0.8rem", color: "#aaa", minWidth: "40px", textAlign: "center",
   },
   zoomHint: {
-    fontSize: "0.72rem", color: "#bbb", marginLeft: "0.25rem",
+    fontSize: "0.72rem", color: "rgba(255,255,255,0.25)", marginLeft: "0.25rem",
   },
   canvasWrapper: {
     overflow:        "auto",
     width:           "100%",
     flex:            1,
     minHeight:       "60vh",
-    border:          "1px solid #ccc",
+    border:          "1px solid rgba(255,255,255,0.08)",
     borderRadius:    "8px",
-    backgroundColor: "#fafafa",
-    boxShadow:       "0 2px 8px rgba(0,0,0,0.08)",
+    backgroundColor: "#0e0e16",
+    boxShadow:       "0 2px 8px rgba(0,0,0,0.4)",
   },
   legend: {
     display: "flex", flexWrap: "wrap", gap: "0.6rem 1.25rem",
-    padding: "0.75rem 1.25rem", backgroundColor: "#fff",
-    border: "1px solid #ddd", borderRadius: "8px",
+    padding: "0.75rem 1.25rem", backgroundColor: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px",
     width: "100%",
   },
   legendItem: { display: "flex", alignItems: "center", gap: "0.4rem" },
-  legendLabel: { fontSize: "0.8rem", color: "#444" },
+  legendLabel: { fontSize: "0.8rem", color: "#888" },
 };

@@ -102,6 +102,33 @@ class FireThreat(ThreatBase):
 
         return [list(n) for n in new_consumed]
 
+    def projected_penalty_map(self, graph, consumed_set, lookahead=3, base_weight=20.0):
+        """
+        Build a penalty map that includes where fire will likely spread.
+
+        Consumed nodes -> INF (impassable now).
+        1-step-ahead frontier -> base_weight (fire arrives next turn).
+        2-step-ahead frontier -> base_weight * 2/3
+        3-step-ahead frontier -> base_weight * 1/3
+
+        Uses worst-case (deterministic) spread: every frontier cell is
+        treated as ignited for the next projection step.
+        """
+        pm = {}
+        for node in consumed_set:
+            pm[node] = INF
+
+        proj = set(consumed_set)
+        for step in range(1, lookahead + 1):
+            frontier = self.get_frontier(graph, proj)
+            weight = base_weight * (lookahead + 1 - step) / lookahead
+            for node in frontier:
+                if node not in pm:
+                    pm[node] = weight
+            proj = proj | frontier
+
+        return pm
+
     def blocked_connections(self, building, consumed_set):
         """Return ids of vertical connections fully consumed on any floor."""
         blocked = []

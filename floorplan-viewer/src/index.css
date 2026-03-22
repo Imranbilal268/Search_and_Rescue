@@ -12,3 +12,8 @@ body {
   width: 100%;
   min-height: 100vh;
 }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

@@ -473,6 +473,13 @@ body.scenario-editor #scenarioPlacementHint{pointer-events:none}
         <input type="range" class="ly-slider" min="5" max="95" value="22" oninput="setXrayOpacity(this.value)" style="flex:1">
       </div>
     </div>
+    <div id="simWallSliderWrap" style="display:none;width:100%;padding:4px 0 2px;border-top:1px solid rgba(255,255,255,.06);margin-top:4px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,.2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px">Wall Opacity</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span id="simWallVal" style="font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(255,255,255,.4)">35%</span>
+        <input type="range" class="ly-slider" min="5" max="100" value="35" oninput="setSimWallOpacity(this.value)" style="flex:1">
+      </div>
+    </div>
   </div>
 
   <!-- BOTTOM: Materials toolbar + hint -->
@@ -661,6 +668,22 @@ function setXrayOpacity(v){
   document.getElementById('xrayVal').textContent=v+'%';
   const sxv=document.getElementById('simXrayVal');if(sxv)sxv.textContent=v+'%';
   if(viewMode==='xray'){applyViewAll();}
+}
+let simWallOpacity=1.0;
+const SIM_WALL_TYPES=new Set([Ty.STONE,Ty.BRICK,Ty.CONCRETE,Ty.DRYWALL,Ty.PLASTER,Ty.WOOD]);
+function setSimWallOpacity(v){
+  simWallOpacity=parseInt(v)/100;
+  const lbl=document.getElementById('simWallVal');if(lbl)lbl.textContent=v+'%';
+  for(const[,e]of placed){
+    if(!SIM_WALL_TYPES.has(e.type))continue;
+    const m=e.mesh.material;
+    if(simWallOpacity>=1){
+      m.transparent=false;m.opacity=1;m.depthWrite=true;
+    }else{
+      m.transparent=true;m.opacity=Math.max(0.05,simWallOpacity);m.depthWrite=false;
+    }
+    m.needsUpdate=true;
+  }
 }
 let customSkyColor=null;
 function setSkyColor(hex){
@@ -2983,7 +3006,9 @@ function gridCoordsFrom3D(gx,gy,gz){
 
 // ===== SIMULATION VIEWER =====
 let simData=null, simTurn=0, simPlaying=false, simPlayTimer=null;
+let simFloorGap=4; // floor-to-floor world-unit gap (4 = normal, 10 = exploded)
 const agentGroup=new THREE.Group();scene.add(agentGroup);
+const pathLineObjects=[];
 
 // agentMeshes: persistent agent objects that lerp smoothly between turns
 // Map<id, { group: THREE.Group, bodyMat: THREE.MeshStandardMaterial,
@@ -2995,9 +3020,8 @@ const deployedLadders=new Map();
 function simWorldPos(ax,ay,az){
   const grid=simData.grid;
   const numCols=grid[0][0].length, numRows=grid[0].length;
-  const WALL_H=3;
   const ox=-Math.floor(numCols/2), oz=-Math.floor(numRows/2);
-  return new THREE.Vector3(ox+ax, az*(WALL_H+1)+1.2, oz+ay);
+  return new THREE.Vector3(ox+ax, az*simFloorGap+1.2, oz+ay);
 }
 
 // ── Make a canvas sprite label ──────────────────────────────────────────────
@@ -3210,13 +3234,21 @@ function simGoTo(t){
 
   // Refresh fire planes every turn
   clearFirePlanes();
-  const WALL_H=3;
   const grid=simData.grid;
   const numCols=grid[0][0].length, numRows=grid[0].length;
   const ox=-Math.floor(numCols/2), oz=-Math.floor(numRows/2);
   for(const node of state.threat_state.consumed_nodes){
     const[nx,ny,nz]=node;
-    spawnFireCell(ox+nx, nz*(WALL_H+1), oz+ny);
+    spawnFireCell(ox+nx, nz*simFloorGap, oz+ny);
+  }
+  // Also show frontier nodes with dimmer orange
+  for(const node of (state.threat_state.frontier_nodes||[])){
+    const[nx,ny,nz]=node;
+    const geo=new THREE.PlaneGeometry(.92,.92);
+    const mat=new THREE.MeshStandardMaterial({color:0xff8800,emissive:0xff5500,emissiveIntensity:.35,transparent:true,opacity:.35,depthWrite:false,side:THREE.DoubleSide});
+    const mesh=new THREE.Mesh(geo,mat);
+    mesh.rotation.x=-Math.PI/2;mesh.position.set(ox+nx,nz*simFloorGap+.06,oz+ny);
+    mesh.userData.isFire=true;agentGroup.add(mesh);
   }
 
   // Update responders — persistent meshes with lerp
@@ -3269,6 +3301,27 @@ function simGoTo(t){
     // Always re-check current turn (handles initial load and scrubbing to same turn)
     _addLadderTurn(simTurn);
   }
+
+  // Clear old path lines
+  for(const l of pathLineObjects){agentGroup.remove(l);l.geometry.dispose();l.material.dispose();}
+  pathLineObjects.length=0;
+
+  // Draw current_path for each active responder
+  for(const r of state.responder_states){
+    if(!r.current_path||r.current_path.length<2)continue;
+    if(r.status==='extracted')continue;
+    const col=r.status==='carrying'?0x00ccff:0x3b82f6;
+    const pts=r.current_path.map(([nx,ny,nz])=>{
+      const wp=simWorldPos(nx,ny,nz);
+      return new THREE.Vector3(wp.x,wp.y+0.55,wp.z);
+    });
+    const geo=new THREE.BufferGeometry().setFromPoints(pts);
+    const mat=new THREE.LineDashedMaterial({color:col,opacity:0.65,transparent:true,dashSize:0.5,gapSize:0.35,linewidth:1});
+    const line=new THREE.Line(geo,mat);
+    line.computeLineDistances();
+    agentGroup.add(line);
+    pathLineObjects.push(line);
+  }
 }
 
 function simStep(delta){
@@ -3301,41 +3354,70 @@ function loadSimData(data){
   camera.aspect=innerWidth/innerHeight||1;
   camera.updateProjectionMatrix();
 
-  // Build the building
+  // Exploded-view: separate floors by simFloorGap instead of WALL_H+1 (4)
+  const NORMAL_GAP=4; // WALL_H+1
+  simFloorGap=10;     // exploded gap — each floor clearly separated
+
+  // Build the building with remapped Y coords for exploded layout
   clearAll();
   const bldgObj={grid:data.grid, name:(data.meta&&data.meta.name)||'Building', room_labels:data.building?.room_labels||{}};
   const synthetic={building:bldgObj};
   let raw;try{raw=parseFloorplanJSON(synthetic);}catch(e){console.error('Build error',e);return;}
   const blocks=dedup(raw);
-  for(const b of blocks)addBlock(b[0],b[1],b[2],b[3],b[4]);
+  for(const b of blocks){
+    const floorIdx=Math.floor(b[1]/NORMAL_GAP);
+    const localY=b[1]%NORMAL_GAP;
+    addBlock(b[0], floorIdx*simFloorGap+localY, b[2], b[3], b[4]);
+  }
   for(const[k]of placed)rebuildGeo(k);
 
-  // Room labels
+  // Room labels (use simFloorGap for Y)
   if(bldgObj.room_labels){
     const grids=extractFloorGrids(bldgObj);const g0=grids[0];
     const{cols,numRows}=g0?gridDims(g0):{cols:16,numRows:12};
-    const ox=-Math.floor(cols/2),oz=-Math.floor(numRows/2);const WH=3;
+    const ox=-Math.floor(cols/2),oz=-Math.floor(numRows/2);
     const labels=flattenFloorMap(bldgObj.room_labels);
     for(const item of labels){const c=parseCoord(item.coord);const fi=c.f||item.floorIdx;
-      addRoomLabel(ox+c.x,fi*(WH+1)+2.5,oz+c.z,item.label);}
+      addRoomLabel(ox+c.x,fi*simFloorGap+2.5,oz+c.z,item.label);}
+  }
+
+  // ── Remove ALL horizontal slabs above ground so every floor is open-topped ─
+  // This eliminates the "white pseudo-roof" artifacts in the exploded view.
+  const numFloors=data.grid.length;
+  const toDeleteSlabs=[];
+  for(const[k,entry]of placed){
+    // Any block sitting exactly at a floor-boundary Y above ground is a ceiling/floor slab
+    if(entry.gy>0 && entry.gy%simFloorGap===0){
+      toDeleteSlabs.push([k,entry]);
+    }
+  }
+  for(const[k,entry]of toDeleteSlabs){
+    scene.remove(entry.mesh);
+    entry.mesh.geometry.dispose();
+    entry.mesh.material.dispose();
+    placed.delete(k);
   }
 
   updateStats();
   setDim('3d');
   camFocus();
-  // Tilt camera for a nice isometric sim view
-  cPhTarget=Math.PI*.32;cThTarget=Math.PI*.6;
+  // Moderate zoom-in — 78 % of camFocus distance so the building fills the view
+  cDTarget*=0.78;
+  // Reduce FOV (telephoto effect) to make geometry appear larger without moving the camera
+  camera.fov=36;camera.updateProjectionMatrix();
+  // Angled isometric camera to see all floors in exploded layout
+  cPhTarget=Math.PI*.40;cThTarget=Math.PI*.55;
   physicsPaused=true;
   document.getElementById('physBtn').textContent='▶ Play';
 
-  // Sim view: standard lighting but walls slightly transparent so agents inside are visible
+  // Sim view: walls transparent so agents inside all floors are visible
   setView('standard');
   for(const[,entry]of placed){
     const b=BLOCKS[entry.type];
     const isWall=b&&(b.name==='BRICK'||b.name==='CONCRT'||b.name==='STONE'||b.name==='DRYWL'||b.name==='METAL');
     if(isWall){
       entry.mesh.material.transparent=true;
-      entry.mesh.material.opacity=0.55;
+      entry.mesh.material.opacity=0.35;
       entry.mesh.material.depthWrite=false;
     }
   }
@@ -3347,9 +3429,9 @@ function loadSimData(data){
   document.getElementById('simScrubber').max=total;
   document.getElementById('simScrubber').value=0;
   document.getElementById('simTurnLbl').textContent='T0 / T'+total;
-  document.getElementById('simBar').classList.add('active');
-
   simGoTo(0);
+  // Scale up all agents so they're clearly visible in the exploded view
+  for(const[,a]of agentMeshes) a.group.scale.setScalar(1.8);
 }
 
 // postMessage integration
@@ -3358,6 +3440,8 @@ window.addEventListener('message',function(e){
 
   if(e.data.type==='RESCUEGRID_SIM_DATA'){
     loadSimData(e.data.payload);
+  } else if(e.data.type==='RESCUEGRID_GO_TO_TURN'){
+    if(simData) simGoTo(e.data.payload.turn);
   } else if(e.data.type==='RESCUEGRID_BUILDING_DATA'){
     const json=e.data.payload;
     clearAll();
@@ -3400,6 +3484,8 @@ window.addEventListener('message',function(e){
   } else if(e.data.type==='RESCUEGRID_PLACEMENT_MODE'){
     // Enter or cancel entity placement mode
     enterScenarioPlacement(e.data.payload||null);
+  } else if(e.data.type==='RESCUEGRID_WALL_OPACITY'){
+    setSimWallOpacity(Math.round(e.data.payload * 100));
   } else if(e.data.type==='RESCUEGRID_UPDATE_AGENTS'){
     // Refresh agent markers after entity list changes (no geometry rebuild needed)
     if(!simData)return;

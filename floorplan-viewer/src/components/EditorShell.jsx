@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import FileUpload    from "./fileUpload";
 import FloorToggle   from "./Floortoggle";
 import GridView      from "./GridView";
@@ -180,6 +180,7 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
   const [scenarioMode,   setScenarioMode]  = useState(null); // 'place-responder'|'place-victim'|'place-fire'|'place-exit'|'place-stairwell'|'place-cell-prop'
   const [showScenario,  setShowScenario]  = useState(true);
   const [sidebarTab,    setSidebarTab]    = useState('entities'); // 'entities'|'building'|'config'
+  const importJsonRef = useRef();
 
   // Auto-load shared JSON → go straight to stamps mode
   useEffect(() => {
@@ -407,6 +408,20 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
     localStorage.setItem('rescuegrid_load_json', s);
     localStorage.setItem('rescuegrid_current_json', s);
     window.location.href = '/BuildingEditor.html';
+  }
+
+  function handleSidebarImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        handleFileLoad(processRawJson(parsed) ? { ...processRawJson(parsed), rawJson: parsed } : null);
+      } catch {}
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   }
 
   // ── Scenario helpers ───────────────────────────────────────────────────
@@ -685,7 +700,6 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
             />
           ) : (
             <div style={S.editorRow}>
-              <StampPalette selectedType={selectedStampType} onSelect={setSelectedStampType} />
               <FloorCanvas
                 grid={currentGrid}
                 floorIndex={activeFloor}
@@ -706,6 +720,21 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
         {/* ── Scenario sidebar ── */}
         {showScenario && (
           <div style={S.sidebar}>
+
+            {/* Import JSON */}
+            <div style={{ padding: '8px 10px 0', borderBottom: `1px solid ${C.border}` }}>
+              <input
+                ref={importJsonRef}
+                type="file"
+                accept=".json"
+                style={{ display: 'none' }}
+                onChange={handleSidebarImport}
+              />
+              <button
+                style={{ ...S.addBtn, color: '#64b5f6', borderColor: 'rgba(100,181,246,.3)', background: 'rgba(100,181,246,.06)', marginBottom: 8 }}
+                onClick={() => importJsonRef.current?.click()}
+              >📂 Import JSON</button>
+            </div>
 
             {/* Tab bar */}
             <div style={S.sideTabBar}>

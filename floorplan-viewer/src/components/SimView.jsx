@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export default function SimView({ rawJson, simData, scenarioMode, liveScenario, onCellClick }) {
+export default function SimView({ rawJson, simData, simTurn, scenarioMode, liveScenario, onCellClick, wallOpacity }) {
   const iframeRef = useRef(null);
   const [ready, setReady] = useState(false);
 
@@ -32,6 +32,15 @@ export default function SimView({ rawJson, simData, scenarioMode, liveScenario, 
     }
   }, [ready, rawJson, simData]);
 
+  // Sync parent turn scrubber to the 3D iframe
+  useEffect(() => {
+    if (!ready || !iframeRef.current || simTurn == null) return;
+    iframeRef.current.contentWindow?.postMessage(
+      { type: "RESCUEGRID_GO_TO_TURN", payload: { turn: simTurn } },
+      "*"
+    );
+  }, [ready, simTurn]);
+
   // Sync placement mode into iframe when it changes
   useEffect(() => {
     if (!ready || !iframeRef.current) return;
@@ -49,6 +58,15 @@ export default function SimView({ rawJson, simData, scenarioMode, liveScenario, 
       "*"
     );
   }, [ready, liveScenario, simData]);
+
+  // Sync wall opacity into iframe
+  useEffect(() => {
+    if (!ready || !iframeRef.current || wallOpacity == null) return;
+    iframeRef.current.contentWindow?.postMessage(
+      { type: "RESCUEGRID_WALL_OPACITY", payload: wallOpacity / 100 },
+      "*"
+    );
+  }, [ready, wallOpacity]);
 
   // Listen for click-to-place events from the iframe
   useEffect(() => {

@@ -69,7 +69,7 @@ def run_simulation(building, scenario, rng=None):
     """
     rng = rng or random.Random()
     cfg = scenario.get("simulation_config", {})
-    max_turns      = cfg.get("max_turns",      40)
+    max_turns      = cfg.get("max_turns",      100)
     urgency_weight = cfg.get("urgency_weight",  1.5)
 
     # Build graph
@@ -157,96 +157,88 @@ def run_simulation(building, scenario, rng=None):
                     })
 
         # ── Step 3: Responder assignment ──────────────────────────────────────
-        penalty_map = threat.penalty_map(consumed_set, frontier)
-        assignments, contention_map = solve_assignment(
-            responders, victims, graph, vert_conn_map, building,
-            scenario_config=cfg,
-            threat_penalty_map=penalty_map
-        )
-
-        # Remove assignments that conflict with already-locked responders.
-        # A victim is locked if a routing responder with a valid path already
-        # owns it. The locked responder keeps priority; the new assignment is
-        # dropped so the displaced responder can pick up an uncontested victim.
-        locked_victims = {
-            r["assigned_to"]
-            for r in responders
-            if r["status"] == "routing"
-            and r["assigned_to"]
-            and r["current_path"]
-        }
-        # Only exclude from new assignments — don't touch the locked responder itself
-        filtered_assignments = []
-        for a in assignments:
-            locker = next(
-                (r for r in responders
-                 if r["assigned_to"] == a["victim_id"]
-                 and r["id"] != a["responder_id"]
-                 and r["status"] == "routing"
-                 and r["current_path"]),
-                None
-            )
-            if locker is None:
-                filtered_assignments.append(a)
-            # else: skip — victim already claimed by a locked responder
-        assignments = filtered_assignments
-
-        # Build vic_map BEFORE the responder loop so current victim positions are used
+        if isinstance(threat, FireThreat):
+            penalty_map = threat.projected_penalty_map(graph, consumed_set, lookahead=5, base_weight=60.0)
+        else:
+            penalty_map = threat.penalty_map(consumed_set, frontier)
         vic_map = {v["id"]: v for v in victims}
 
-        # Update responder assigned_to
-        assigned = {a["responder_id"]: a for a in assignments}
+        # Phase A — refresh paths for responders already en route to a valid victim.
+        # These "stable" responders keep their assignment; their victims are excluded
+        # from the global solver so no other responder gets double-assigned to the
+        # same target, which was causing oscillation / shuffling in place.
+        locked_victim_ids = set()
         for r in responders:
-            if r["status"] in ("extracted", "carrying"):
+            if r["status"] in ("extracted", "carrying", "blocked"):
                 continue
-            a = assigned.get(r["id"])
-            # If this responder already has an assignment and a valid path,
-            # keep it — only switch if the path is gone or victim extracted.
-            if r["assigned_to"] and r["current_path"]:
-                current_vid = r["assigned_to"]
-                current_v = vic_map.get(current_vid)
-                if current_v and current_v["status"] not in ("extracted", "being_extracted"):
-                    # Check no other responder already committed to this victim
-                    already_claimed = any(
-                        other["id"] != r["id"]
-                        and other["assigned_to"] == current_vid
-                        and other["status"] == "routing"
-                        and other["current_path"]
-                        for other in responders
-                        if other["id"] < r["id"]  # lower ID wins tie-break
-                    )
-                    if not already_claimed:
-                        from astar import astar as _astar
-                        refreshed, cost = _astar(
-                            graph, vert_conn_map, building,
-                            tuple(r["position"]), tuple(current_v["position"]),
-                            equipment_set=set(r["equipment"]),
-                            threat_penalty_map=penalty_map,
-                            contention_penalty_map=contention_map
-                        )
-                        if refreshed and cost < INF:
-                            r["current_path"] = refreshed
-                            r["path_cost"]    = cost
-                            continue
-                    # Victim claimed by another or path gone — fall through to reassign
-                    r["assigned_to"]  = None
-                    r["current_path"] = []
+            if not r["assigned_to"] or not r["current_path"]:
+                continue
+            current_v = vic_map.get(r["assigned_to"])
+            if not current_v or current_v["status"] in ("extracted", "being_extracted"):
+                r["assigned_to"]  = None
+                r["current_path"] = []
+                continue
+            from astar import astar as _astar
+            refreshed, cost = _astar(
+                graph, vert_conn_map, building,
+                tuple(r["position"]), tuple(current_v["position"]),
+                equipment_set=set(r["equipment"]),
+                threat_penalty_map=penalty_map,
+            )
+            if refreshed and cost < INF:
+                r["current_path"] = refreshed
+                r["path_cost"]    = cost
+                locked_victim_ids.add(r["assigned_to"])
+            else:
+                # Victim no longer reachable — release so solver can reassign
+                r["assigned_to"]  = None
+                r["current_path"] = []
+
+        # Phase B — run assignment solver only for responders that still have no
+        # path, against victims not already locked by a stable responder.
+        free_responders = [
+            r for r in responders
+            if r["status"] not in ("extracted", "carrying", "blocked")
+            and not r["assigned_to"]
+        ]
+        free_victims = [
+            v for v in victims
+            if v["status"] not in ("extracted", "being_extracted")
+            and v["id"] not in locked_victim_ids
+        ]
+
+        assignments    = []
+        contention_map = {}
+        if free_responders and free_victims:
+            assignments, contention_map = solve_assignment(
+                free_responders, free_victims, graph, vert_conn_map, building,
+                scenario_config=cfg,
+                threat_penalty_map=penalty_map,
+            )
+
+        # Apply new assignments to previously-free responders
+        new_assigned = {a["responder_id"]: a for a in assignments}
+        for r in responders:
+            if r["status"] in ("extracted", "carrying", "blocked") or r["assigned_to"]:
+                continue  # stable or inactive — skip
+            a = new_assigned.get(r["id"])
             if a:
                 r["assigned_to"]  = a["victim_id"]
                 r["current_path"] = a["path"]
                 r["path_cost"]    = a["cost"]
-                stuck_turns[r["id"]] = 0  # reset on successful assignment
+                stuck_turns[r["id"]] = 0
             else:
                 r["assigned_to"]  = None
                 r["current_path"] = []
 
-        # Update victim assigned_to
+        # Update victim assigned_to bookkeeping
         for v in victims:
             v["assigned_to"] = None
-        for a in assignments:
-            v = vic_map.get(a["victim_id"])
-            if v:
-                v["assigned_to"] = a["responder_id"]
+        for r in responders:
+            if r["assigned_to"] and r["status"] not in ("extracted",):
+                v = vic_map.get(r["assigned_to"])
+                if v:
+                    v["assigned_to"] = r["id"]
 
         # ── Step 4: Responder routing ─────────────────────────────────────────
         for r in responders:
@@ -261,7 +253,7 @@ def run_simulation(building, scenario, rng=None):
                 # This runs once when carrying begins, and again only if the
                 # path gets fully consumed (handled below).
                 exit_path, _, exit_id = nearest_exit(
-                    graph, building, tuple(r["position"]),
+                    graph, vert_conn_map, building, tuple(r["position"]),
                     set(r["equipment"]), penalty_map
                 )
                 if exit_path:
