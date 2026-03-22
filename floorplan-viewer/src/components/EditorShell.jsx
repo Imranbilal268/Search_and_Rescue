@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import FileUpload    from "./fileUpload";
 import FloorToggle   from "./Floortoggle";
 import GridView      from "./GridView";
@@ -9,38 +9,9 @@ import { compileAllFloors } from "./StampComplier";
 import { createStamp, updateStamp, STAMP_TYPES } from "./Stamptypes";
 import { gridToStamps } from "./GridToStamps";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants — default grid dimensions used for stamp-driven mode.
-// When a file is uploaded these are overridden by the building's own size.
-// ─────────────────────────────────────────────────────────────────────────────
-
 const DEFAULT_FLOOR_COUNT = 3;
 const DEFAULT_GRID_WIDTH  = 20;
 const DEFAULT_GRID_HEIGHT = 15;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EditorShell
-//
-// Owns ALL mutable state for the editor. Child components are stateless
-// receivers — they call callbacks to request state changes here.
-//
-// Modes (null = landing screen):
-//   "choosing-upload" — full FileUpload screen
-//   "post-upload"     — file loaded, user chooses view-only vs edit-as-stamps
-//   "upload"          — read-only view of uploaded grid (bypasses compiler)
-//   "stamps"          — stamp editor, compiler drives GridView
-//
-// State:
-//   mode:            string | null
-//   building:        parsed upload data
-//   stampsPerFloor:  { [z]: Stamp[] }
-//   gridMeta:        { width, height, floorCount }
-//   activeFloor:     number
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────────────────────
-// buildWallBorder — creates 1×1 wall stamps along the perimeter of a grid
-// ─────────────────────────────────────────────────────────────────────────────
 
 function buildWallBorder(width, height) {
   const stamps = [];
@@ -54,31 +25,65 @@ function buildWallBorder(width, height) {
   return stamps;
 }
 
-export default function EditorShell() {
-  // ── Mode & active floor ───────────────────────────────────────────────────
+function processRawJson(json) {
+  try {
+    const b = json.building || json;
+    const floors = b.grid || [];
+    if (!floors.length) return null;
+    const meta = b.meta || {};
+    return {
+      floors,
+      buildingName:        meta.name ?? b.name ?? null,
+      roomLabels:          b.room_labels          || {},
+      cellProperties:      b.cell_properties      || {},
+      floorLabels:         b.floor_labels         || {},
+      verticalConnections: b.vertical_connections || [],
+      exitNodes:           b.exit_nodes           || [],
+      rawJson: json,
+    };
+  } catch { return null; }
+}
+
+// Dark-theme design tokens
+const C = {
+  bg:        '#0a0a0f',
+  surface:   'rgba(255,255,255,.025)',
+  border:    'rgba(255,255,255,.07)',
+  borderHi:  'rgba(255,255,255,.12)',
+  text:      'rgba(255,255,255,.8)',
+  textDim:   'rgba(255,255,255,.3)',
+  textFaint: 'rgba(255,255,255,.15)',
+  accent:    '#5bf0a5',
+  accentBg:  'rgba(91,240,165,.08)',
+  accentBdr: 'rgba(91,240,165,.25)',
+  blue:      '#3b82f6',
+  blueBg:    'rgba(59,130,246,.1)',
+  blueBdr:   'rgba(59,130,246,.25)',
+  amber:     '#f59e0b',
+  amberBg:   'rgba(245,158,11,.1)',
+  amberBdr:  'rgba(245,158,11,.25)',
+  red:       '#ef4444',
+  redBg:     'rgba(239,68,68,.08)',
+  redBdr:    'rgba(239,68,68,.2)',
+  mono:      "'JetBrains Mono', monospace",
+  sans:      "'Outfit', sans-serif",
+};
+
+export default function EditorShell({ initialJson, onJsonChange, onBack, onNavigate }) {
   const [mode,              setMode]              = useState(null);
   const [activeFloor,       setActiveFloor]       = useState(0);
   const [selectedStampType, setSelectedStampType] = useState(null);
-  const [viewMode,          setViewMode]          = useState("floorplan"); // "floorplan" | "3d"
+  const [viewMode,          setViewMode]          = useState("floorplan");
 
-  // ── Upload mode state ─────────────────────────────────────────────────────
-  const [building,    setBuilding]    = useState(null);
-  // Raw JSON from the uploaded file — used to send to the simulation API
-  const [rawJson,     setRawJson]     = useState(null);
-  // Simulation results from the API
-  const [simData,     setSimData]     = useState(null);
-  const [simStatus,   setSimStatus]   = useState("idle"); // "idle"|"loading"|"success"|"error"
-  const [simError,    setSimError]    = useState(null);
-  const [simTurn,     setSimTurn]     = useState(0);
+  const [building,  setBuilding]  = useState(null);
+  const [rawJson,   setRawJson]   = useState(null);
 
-  // ── Setup state — used on "Start blank" before entering stamps mode ─────────
   const [setupMeta, setSetupMeta] = useState({
     width:      DEFAULT_GRID_WIDTH,
     height:     DEFAULT_GRID_HEIGHT,
     floorCount: DEFAULT_FLOOR_COUNT,
   });
 
-  // ── Stamp mode state ──────────────────────────────────────────────────────
   const [stampsPerFloor, setStampsPerFloor] = useState({});
   const [gridMeta,       setGridMeta]       = useState({
     width:      DEFAULT_GRID_WIDTH,
@@ -86,41 +91,83 @@ export default function EditorShell() {
     floorCount: DEFAULT_FLOOR_COUNT,
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Compiler — re-runs automatically whenever stamps or grid size change.
-  // Only active in stamp mode; upload mode uses building.floors directly.
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Scenario state ─────────────────────────────────────────────────────────
+  const [responders,    setResponders]    = useState([]);
+  const [victims,       setVictims]       = useState([]);
+  const [threat,        setThreat]        = useState(null); // null | { type:'fire', origin:{x,y,z}, fire_params:{...} }
+  const [scenarioMode,  setScenarioMode]  = useState(null); // 'place-responder' | 'place-victim' | 'place-fire' | null
+  const [showScenario,  setShowScenario]  = useState(true);
 
+  // Auto-load shared JSON
+  useEffect(() => {
+    if (!initialJson || mode !== null) return;
+    const data = processRawJson(initialJson);
+    if (!data) return;
+    setBuilding(data);
+    setRawJson(initialJson);
+    setActiveFloor(0);
+    setMode("post-upload");
+    // Load existing scenario if present
+    const sc = initialJson?.scenario;
+    if (sc?.responders) setResponders(sc.responders);
+    if (sc?.victims)    setVictims(sc.victims);
+    if (sc?.threat)     setThreat(sc.threat);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync scenario changes back to shared JSON
+  useEffect(() => {
+    if (!rawJson) return;
+    const updated = {
+      ...rawJson,
+      scenario: {
+        ...(rawJson.scenario || {}),
+        responders,
+        victims,
+        ...(threat ? { threat } : {}),
+      },
+    };
+    onJsonChange?.(updated);
+  }, [responders, victims, threat]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─────────────────────────────────────────────────────────────────────────
   const compiledGrids = useMemo(() => {
     if (mode !== "stamps") return null;
-    return compileAllFloors(
-      stampsPerFloor,
-      gridMeta.floorCount,
-      gridMeta.width,
-      gridMeta.height
-    );
+    return compileAllFloors(stampsPerFloor, gridMeta.floorCount, gridMeta.width, gridMeta.height);
   }, [mode, stampsPerFloor, gridMeta]);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Stamp CRUD — pure updates, never mutate state directly
-  // ─────────────────────────────────────────────────────────────────────────
-
-  // paintCell: places a single 1×1 stamp at (x, y), replacing whatever
-  // was already at that cell. This is the only way stamps are created in
-  // paint mode — no append, no overlap.
   const paintCell = useCallback((type, x, y) => {
+    // If in scenario placement mode, place entity instead
+    if (scenarioMode === 'place-responder') {
+      const id = 'R' + (responders.length + 1);
+      setResponders(prev => [...prev, { id, x, y, z: activeFloor }]);
+      setScenarioMode(null);
+      return;
+    }
+    if (scenarioMode === 'place-victim') {
+      const id = 'V' + (victims.length + 1);
+      setVictims(prev => [...prev, { id, x, y, z: activeFloor, mobility: 'immobile' }]);
+      setScenarioMode(null);
+      return;
+    }
+    if (scenarioMode === 'place-fire') {
+      setThreat(prev => ({
+        type: 'fire',
+        origin: { x, y, z: activeFloor },
+        fire_params: prev?.fire_params ?? { spread_probability: 0.4, stairwell_acceleration: 2.0, accelerant_bonus: 0.3 },
+      }));
+      setScenarioMode(null);
+      return;
+    }
     const stamp = createStamp(type, x, y);
     stamp.width  = 1;
     stamp.height = 1;
     setStampsPerFloor(prev => {
       const existing = prev[activeFloor] ?? [];
-      // Remove any stamp that already occupies this exact cell
       const filtered = existing.filter(s => !(s.x === x && s.y === y));
       return { ...prev, [activeFloor]: [...filtered, stamp] };
     });
-  }, [activeFloor]);
+  }, [activeFloor, scenarioMode, responders, victims]);
 
-  // Keep addStamp as an alias so FloorCanvas interface stays the same
   const addStamp = paintCell;
 
   const patchStamp = useCallback((stampId, patch) => {
@@ -139,56 +186,24 @@ export default function EditorShell() {
     }));
   }, [activeFloor]);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Mode transitions
-  // ─────────────────────────────────────────────────────────────────────────
-
-  // FileUpload calls this — go to the decision screen, not straight to viewer
+  // ── Mode transitions ────────────────────────────────────────────────────
   function handleFileLoad(data) {
     setBuilding(data);
     setRawJson(data.rawJson ?? null);
-    setSimData(null);
-    setSimStatus("idle");
-    setSimError(null);
     setActiveFloor(0);
-    setMode("post-upload");   // ← pause here so user can choose
+    setMode("post-upload");
+    onJsonChange?.(data.rawJson ?? null);
+    const sc = data.rawJson?.scenario;
+    if (sc?.responders) setResponders(sc.responders);
+    if (sc?.victims)    setVictims(sc.victims);
+    if (sc?.threat)     setThreat(sc.threat);
   }
 
-  // POST the building JSON to the FastAPI backend and run the simulation
-  async function handleRunSimulation() {
-    if (!rawJson) return;
-    setSimStatus("loading");
-    setSimError(null);
-    try {
-      const res = await fetch("/api/simulate", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(rawJson),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail ?? res.statusText);
-      }
-      const data = await res.json();
-      setSimData(data);
-      setSimStatus("success");
-      setViewMode("3d");   // automatically switch to the 3D view
-    } catch (err) {
-      setSimStatus("error");
-      setSimError(err.message);
-    }
-  }
-
-  // User picks "View only" on the post-upload screen
   function handleViewOnly() {
     setMode("upload");
-    // If the file has a scenario, default to the 3D view so the preview is visible
     if (rawJson?.scenario) setViewMode("3d");
   }
 
-  // User picks "Edit as stamps" on the post-upload screen
-  // Convert the imported grid into stamps, set gridMeta from building dims,
-  // then switch to stamp editor mode
   function handleEditAsStamps() {
     if (!building) return;
     const converted = gridToStamps(building.floors);
@@ -203,42 +218,29 @@ export default function EditorShell() {
     setMode("stamps");
   }
 
-  // Navigate from landing to the dimension-picker screen
-  function handleGoToSetup() {
-    setMode("setup");
-  }
+  function handleGoToSetup()  { setMode("setup"); }
+  function handleGoToUpload() { setMode("choosing-upload"); }
 
-  // Called when user confirms dimensions on the setup screen
   function handleStartBlank(w, h, fc) {
     const meta = { width: w, height: h, floorCount: fc };
     setGridMeta(meta);
-    // Pre-fill every floor with a wall border so the canvas isn't blank
     const initial = {};
-    for (let z = 0; z < fc; z++) {
-      initial[z] = buildWallBorder(w, h);
-    }
+    for (let z = 0; z < fc; z++) initial[z] = buildWallBorder(w, h);
     setStampsPerFloor(initial);
     setActiveFloor(0);
     setMode("stamps");
   }
 
-  function handleGoToUpload() {
-    setMode("choosing-upload");
-  }
-
-  // Resize the grid live in stamp mode — extends or trims stamps
   function handleResizeGrid(field, rawVal) {
     const val = Math.max(3, Math.min(50, Number(rawVal) || 3));
     const newMeta = { ...gridMeta, [field]: val };
     setGridMeta(newMeta);
-    // Rebuild border for all floors with new dimensions
     const newBorder = buildWallBorder(newMeta.width, newMeta.height);
     setStampsPerFloor(prev => {
       const next = {};
       for (let z = 0; z < newMeta.floorCount; z++) {
-        // Keep interior stamps, replace border cells only
         const interior = (prev[z] ?? []).filter(s =>
-          s.id.startsWith("border_") === false &&
+          !s.id.startsWith("border_") &&
           s.x > 0 && s.x < newMeta.width - 1 &&
           s.y > 0 && s.y < newMeta.height - 1
         );
@@ -252,571 +254,748 @@ export default function EditorShell() {
     setMode(null);
     setBuilding(null);
     setRawJson(null);
-    setSimData(null);
-    setSimStatus("idle");
-    setSimError(null);
-    setSimTurn(0);
     setStampsPerFloor({});
     setActiveFloor(0);
     setSelectedStampType(null);
+    setResponders([]);
+    setVictims([]);
+    setThreat(null);
+    setScenarioMode(null);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Derive props for GridView
-  // ─────────────────────────────────────────────────────────────────────────
+  function handleOpenInBuildingEditor() {
+    if (!rawJson) return;
+    const s = JSON.stringify(rawJson);
+    localStorage.setItem('rescuegrid_load_json', s);
+    localStorage.setItem('rescuegrid_current_json', s);
+    window.location.href = '/BuildingEditor.html';
+  }
 
+  // ── Scenario helpers ───────────────────────────────────────────────────
+  function removeResponder(id) { setResponders(prev => prev.filter(r => r.id !== id)); }
+  function removeVictim(id)    { setVictims(prev => prev.filter(v => v.id !== id)); }
+  function updateVictimMobility(id, mobility) {
+    setVictims(prev => prev.map(v => v.id === id ? { ...v, mobility } : v));
+  }
+  function updateEntityFloor(type, id, z) {
+    const zi = Math.max(0, parseInt(z) || 0);
+    if (type === 'responder') setResponders(prev => prev.map(r => r.id === id ? { ...r, z: zi } : r));
+    else setVictims(prev => prev.map(v => v.id === id ? { ...v, z: zi } : v));
+  }
+  function updateEntityCoord(type, id, field, val) {
+    const n = Math.max(0, parseInt(val) || 0);
+    if (type === 'responder') setResponders(prev => prev.map(r => r.id === id ? { ...r, [field]: n } : r));
+    else setVictims(prev => prev.map(v => v.id === id ? { ...v, [field]: n } : v));
+  }
+
+  // ── Threat helpers ──────────────────────────────────────────────────────
+  function updateFireParam(key, val) {
+    setThreat(prev => prev ? {
+      ...prev,
+      fire_params: { ...prev.fire_params, [key]: parseFloat(val) || 0 },
+    } : prev);
+  }
+  function updateFireOriginCoord(field, val) {
+    const n = Math.max(0, parseInt(val) || 0);
+    setThreat(prev => prev ? { ...prev, origin: { ...prev.origin, [field]: n } } : prev);
+  }
+
+  // Derived scenario object for GridView
+  const liveScenario = {
+    responders: responders.length ? responders : (rawJson?.scenario?.responders ?? []),
+    victims:    victims.length    ? victims    : (rawJson?.scenario?.victims    ?? []),
+    threat:     threat ?? rawJson?.scenario?.threat ?? null,
+  };
+
+  // ── Derived props ──────────────────────────────────────────────────────
   const currentGrid = mode === "upload"
     ? building?.floors?.[activeFloor] ?? []
     : compiledGrids?.[activeFloor]    ?? [];
-
-  const floorCount = mode === "upload"
-    ? (building?.floors?.length ?? 1)
-    : gridMeta.floorCount;
-
+  const floorCount     = mode === "upload" ? (building?.floors?.length ?? 1) : gridMeta.floorCount;
   const roomLabels     = mode === "upload" ? (building?.roomLabels     ?? {}) : {};
   const cellProperties = mode === "upload" ? (building?.cellProperties ?? {}) : {};
-  const buildingName   = mode === "upload" ? (building?.buildingName   ?? null) : null;
+  const buildingName   = building?.buildingName ?? null;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Render — landing screen
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // ── LANDING ────────────────────────────────────────────────────────────
   if (mode === null) {
     return (
-      <div style={styles.landing}>
-        <h1 style={styles.landingTitle}>Floor Plan Viewer</h1>
-        <p style={styles.landingSubtitle}>Choose how to get started</p>
-        <div style={styles.landingCards}>
-
-          <div style={styles.card} onClick={handleGoToSetup}>
-            <span style={styles.cardIcon}>✏️</span>
-            <h2 style={styles.cardTitle}>Start blank</h2>
-            <p style={styles.cardDesc}>
-              Set dimensions and design floors from scratch using the stamp palette.
-            </p>
+      <div style={S.fullPage}>
+        {onBack && (
+          <button style={S.floatBack} onClick={onBack}>← HOME</button>
+        )}
+        <div style={S.landingWrap}>
+          <div style={{ fontFamily: C.mono, fontSize: 8, color: 'rgba(91,240,165,.5)', letterSpacing: '2px', marginBottom: 16 }}>
+            RESCUEGRID · SCENARIO BUILDER
           </div>
+          <h1 style={{ fontFamily: C.sans, fontWeight: 700, fontSize: 36, letterSpacing: -1, color: '#fff', margin: '0 0 8px' }}>
+            Scenario Builder
+          </h1>
+          <p style={{ fontFamily: C.mono, fontSize: 11, color: C.textDim, lineHeight: 1.7, maxWidth: 440, textAlign: 'center', margin: '0 0 40px' }}>
+            Design floor plans, place responders and victims, define threats — then export directly to the simulation engine.
+          </p>
 
-          <div style={styles.card} onClick={handleGoToUpload}>
-            <span style={styles.cardIcon}>📂</span>
-            <h2 style={styles.cardTitle}>Import JSON</h2>
-            <p style={styles.cardDesc}>
-              Upload an existing building JSON file to view and inspect it.
-            </p>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <LandingCard
+              icon="✏️" tag="BLANK" accent={C.accent}
+              title="Start blank"
+              desc="Set grid dimensions and build floors from scratch with the stamp palette."
+              onClick={handleGoToSetup}
+            />
+            <LandingCard
+              icon="📂" tag="IMPORT" accent="#64b5f6"
+              title="Import JSON"
+              desc="Load an existing building JSON to view, edit, and add scenario data."
+              onClick={handleGoToUpload}
+            />
           </div>
-
         </div>
       </div>
     );
   }
 
-  // ── Setup screen — dimension picker before entering stamp editor ─────────
+  // ── SETUP ──────────────────────────────────────────────────────────────
   if (mode === "setup") {
-    return (
-      <SetupScreen
-        meta={setupMeta}
-        onChange={setSetupMeta}
-        onConfirm={() => handleStartBlank(setupMeta.width, setupMeta.height, setupMeta.floorCount)}
-        onBack={handleReset}
-      />
-    );
+    return <SetupScreen meta={setupMeta} onChange={setSetupMeta}
+      onConfirm={() => handleStartBlank(setupMeta.width, setupMeta.height, setupMeta.floorCount)}
+      onBack={handleReset} />;
   }
 
-  // ── Upload screen — full FileUpload with a back button ────────────────────
+  // ── UPLOAD ─────────────────────────────────────────────────────────────
   if (mode === "choosing-upload") {
     return (
-      <div style={styles.uploadScreen}>
-        <button style={styles.backBtn} onClick={handleReset}>
-          ← Back
-        </button>
-        <FileUpload onLoad={handleFileLoad} />
+      <div style={{ ...S.fullPage, position: 'relative' }}>
+        <button style={S.floatBack} onClick={handleReset}>← BACK</button>
+        <div style={{ filter: 'invert(0)' }}>
+          <FileUpload onLoad={handleFileLoad} />
+        </div>
       </div>
     );
   }
 
-  // ── Post-upload decision — choose view-only or edit-as-stamps ─────────────
+  // ── POST-UPLOAD ────────────────────────────────────────────────────────
   if (mode === "post-upload" && building) {
-    const floorWord = building.floors.length === 1 ? "floor" : "floors";
+    const fw = building.floors.length === 1 ? "floor" : "floors";
     return (
-      <div style={styles.landing}>
-        <div style={styles.postUploadCard}>
-          <span style={{ fontSize: "2rem" }}>✅</span>
-          <h2 style={styles.postUploadTitle}>
-            {building.buildingName ?? "Building"} loaded
-          </h2>
-          <p style={styles.postUploadMeta}>
-            {building.floors.length} {floorWord} ·{" "}
-            {building.floors[0]?.[0]?.length ?? "?"} × {building.floors[0]?.length ?? "?"} grid
-          </p>
-          <p style={styles.postUploadQuestion}>How would you like to open it?</p>
-
-          <div style={styles.postUploadActions}>
-            {/* Option A — read-only */}
-            <button style={styles.actionBtn} onClick={handleViewOnly}>
-              <span style={styles.actionIcon}>👁</span>
-              <span style={styles.actionLabel}>View only</span>
-              <span style={styles.actionDesc}>
-                Display the floor plan as-is. No editing.
-              </span>
-            </button>
-
-            {/* Option B — convert to stamps */}
-            <button style={{ ...styles.actionBtn, ...styles.actionBtnPrimary }} onClick={handleEditAsStamps}>
-              <span style={styles.actionIcon}>✏️</span>
-              <span style={styles.actionLabel}>Edit as stamps</span>
-              <span style={styles.actionDesc}>
-                Convert the grid into editable cells. Paint over any cell
-                to change its type — drag to fill areas.
-              </span>
-            </button>
+      <div style={S.fullPage}>
+        <div style={S.postCard}>
+          <div style={{ fontFamily: C.mono, fontSize: 8, color: 'rgba(91,240,165,.5)', letterSpacing: '2px', marginBottom: 12 }}>
+            FILE LOADED
+          </div>
+          <div style={{ fontFamily: C.sans, fontWeight: 700, fontSize: 22, color: '#fff', marginBottom: 4 }}>
+            {building.buildingName ?? "Building"}
+          </div>
+          <div style={{ fontFamily: C.mono, fontSize: 9, color: C.textDim, marginBottom: 24 }}>
+            {building.floors.length} {fw}&nbsp;·&nbsp;
+            {building.floors[0]?.[0]?.length ?? "?"} × {building.floors[0]?.length ?? "?"} cells
           </div>
 
-          <button style={styles.postUploadBack} onClick={handleGoToUpload}>
-            ← Upload a different file
-          </button>
+          <div style={{ fontFamily: C.mono, fontSize: 9, color: C.textFaint, marginBottom: 14, letterSpacing: '0.5px' }}>
+            HOW WOULD YOU LIKE TO OPEN IT?
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, width: '100%', marginBottom: 16 }}>
+            <PostBtn icon="👁" label="View only" desc="Read-only floor plan." onClick={handleViewOnly} />
+            <PostBtn icon="✏️" label="Edit as stamps" desc="Convert grid to editable cells." onClick={handleEditAsStamps} primary />
+          </div>
+
+          <button style={S.textLink} onClick={handleGoToUpload}>← Upload a different file</button>
         </div>
       </div>
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Render — editor / viewer
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── EDITOR / VIEWER ────────────────────────────────────────────────────
+  const canEdit = mode === "stamps";
+  const canPlace = scenarioMode !== null;
 
   return (
-    <div style={styles.wrapper}>
+    <div style={S.shell}>
 
-      {/* ── Header ── */}
-      <header style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Floor Plan Viewer</h1>
-          {buildingName && <p style={styles.buildingName}>{buildingName}</p>}
-          {mode === "stamps" && (
-            <p style={styles.modeBadge}>✏️ Stamp editor</p>
+      {/* ── Topbar ── */}
+      <div style={S.topbar}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontFamily: C.sans, fontWeight: 700, fontSize: 14, color: C.text, letterSpacing: -.3 }}>
+            Scenario Builder
+          </span>
+          {buildingName && (
+            <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint, letterSpacing: '.5px' }}>
+              · {buildingName}
+            </span>
+          )}
+          {canEdit && (
+            <span style={{ fontFamily: C.mono, fontSize: 7, color: C.accent, background: C.accentBg, border: `1px solid ${C.accentBdr}`, padding: '2px 7px', borderRadius: 4, letterSpacing: '1px' }}>
+              EDIT
+            </span>
+          )}
+          {canEdit && canPlace && (
+            <span style={{ fontFamily: C.mono, fontSize: 7, color: scenarioMode === 'place-fire' ? '#ff6030' : C.amber, background: scenarioMode === 'place-fire' ? 'rgba(255,96,48,.12)' : C.amberBg, border: `1px solid ${scenarioMode === 'place-fire' ? 'rgba(255,96,48,.3)' : C.amberBdr}`, padding: '2px 7px', borderRadius: 4, letterSpacing: '1px' }}>
+              {scenarioMode === 'place-responder' ? '📍 CLICK TO PLACE RESPONDER' : scenarioMode === 'place-victim' ? '📍 CLICK TO PLACE VICTIM' : '🔥 CLICK TO PLACE FIRE ORIGIN'}
+            </span>
           )}
         </div>
-        <div style={styles.headerRight}>
-          {mode === "stamps" && (
-            <div style={styles.dimControls}>
-              <label style={styles.dimLabel}>W
-                <input type="number" min={3} max={50} value={gridMeta.width}
-                  onChange={e => handleResizeGrid("width", e.target.value)}
-                  style={styles.dimInput} />
-              </label>
-              <span style={styles.dimSep}>×</span>
-              <label style={styles.dimLabel}>H
-                <input type="number" min={3} max={50} value={gridMeta.height}
-                  onChange={e => handleResizeGrid("height", e.target.value)}
-                  style={styles.dimInput} />
-              </label>
-              <span style={styles.dimSep}>·</span>
-              <label style={styles.dimLabel}>Floors
-                <input type="number" min={1} max={20} value={gridMeta.floorCount}
-                  onChange={e => handleResizeGrid("floorCount", e.target.value)}
-                  style={styles.dimInput} />
-              </label>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Grid resize — stamp mode only */}
+          {canEdit && (
+            <div style={S.dimRow}>
+              {[['W', 'width', 3, 50], ['H', 'height', 3, 50], ['FL', 'floorCount', 1, 20]].map(([lbl, field, mn, mx]) => (
+                <label key={field} style={S.dimLabel}>
+                  <span style={S.dimLblTxt}>{lbl}</span>
+                  <input type="number" min={mn} max={mx} value={gridMeta[field]}
+                    onChange={e => handleResizeGrid(field, e.target.value)}
+                    style={S.dimInput} />
+                </label>
+              ))}
             </div>
           )}
-          {/* Run Simulation — only shown when a scenario is available */}
-          {rawJson?.scenario && (
-            <div style={styles.simControls}>
-              <button
-                style={{
-                  ...styles.simBtn,
-                  ...(simStatus === "loading" ? styles.simBtnLoading : {}),
-                }}
-                onClick={handleRunSimulation}
-                disabled={simStatus === "loading"}
-              >
-                {simStatus === "loading" ? "⏳ Running…" : "▶ Run Simulation"}
-              </button>
-              {simStatus === "success" && (
-                <span style={styles.simSuccess}>✓ Done</span>
-              )}
-              {simStatus === "error" && (
-                <span style={styles.simError} title={simError}>⚠ Error</span>
-              )}
-            </div>
+          {rawJson && (
+            <button style={S.topBtn} onClick={handleOpenInBuildingEditor}>
+              🏗 Building Editor
+            </button>
           )}
-          <button style={styles.resetBtn} onClick={handleReset}>
-            ↩ Back to start
+          <button
+            style={{ ...S.topBtn, color: 'rgba(91,240,165,.5)', borderColor: C.accentBdr, background: C.accentBg }}
+            onClick={() => setShowScenario(v => !v)}
+          >
+            {showScenario ? '◀ Scenario' : '▶ Scenario'}
           </button>
+          {onNavigate && (
+            <button
+              style={{ ...S.topBtn, color: '#ff8844', borderColor: 'rgba(255,136,68,.3)', background: 'rgba(255,136,68,.08)', fontWeight: 700 }}
+              onClick={() => onNavigate('simulation')}
+            >
+              Run Simulation →
+            </button>
+          )}
+          <button style={S.topBtnDanger} onClick={onBack ?? handleReset}>← Home</button>
         </div>
-      </header>
-
-      {/* ── View mode tabs ── */}
-      <div style={styles.viewTabs}>
-        <button
-          style={{ ...styles.viewTab, ...(viewMode === "floorplan" ? styles.viewTabActive : {}) }}
-          onClick={() => setViewMode("floorplan")}
-        >
-          🗺 Floor Plan
-        </button>
-        <button
-          style={{ ...styles.viewTab, ...(viewMode === "3d" ? styles.viewTabActive : {}) }}
-          onClick={() => setViewMode("3d")}
-        >
-          🧊 3D View
-        </button>
       </div>
 
-      {/* ── Floor tabs — floor plan mode only ── */}
+      {/* ── View tabs ── */}
+      <div style={S.tabRow}>
+        {['floorplan', '3d'].map(v => (
+          <button key={v} style={{ ...S.tab, ...(viewMode === v ? S.tabActive : {}) }}
+            onClick={() => setViewMode(v)}>
+            {v === 'floorplan' ? '🗺 Floor Plan' : '🧊 3D View'}
+          </button>
+        ))}
+        <div style={{ flex: 1 }} />
+        {viewMode === 'floorplan' && canEdit && canPlace && (
+          <button style={{ ...S.tab, color: C.textDim, fontSize: 9 }}
+            onClick={() => setScenarioMode(null)}>
+            ✕ Cancel placement
+          </button>
+        )}
+      </div>
+
+      {/* ── Floor tabs ── */}
       {viewMode === "floorplan" && (
-        <FloorToggle
-          count={floorCount}
-          active={activeFloor}
-          onChange={setActiveFloor}
-        />
+        <FloorToggle count={floorCount} active={activeFloor} onChange={setActiveFloor} />
       )}
 
-      {/* ── Simulation turn scrubber — floor plan mode when sim data available ── */}
-      {viewMode === "floorplan" && simData && (
-        <div style={styles.turnBar}>
-          <button style={styles.turnBtn} onClick={() => setSimTurn(t => Math.max(0, t - 1))}>◀</button>
-          <input type="range" min={0} max={simData.states.length - 1} value={simTurn}
-            onChange={e => setSimTurn(+e.target.value)} style={styles.turnScrubber} />
-          <button style={styles.turnBtn} onClick={() => setSimTurn(t => Math.min(simData.states.length - 1, t + 1))}>▶</button>
-          <span style={styles.turnLabel}>
-            T{simTurn} / T{simData.states.length - 1}
-            {" · "}
-            <span style={{ color: simData.states[simTurn]?.status === "success" ? "#22cc88" : simData.states[simTurn]?.status === "failed" ? "#ee4444" : "#888" }}>
-              {simData.states[simTurn]?.status?.toUpperCase()}
-            </span>
-          </span>
-        </div>
-      )}
+      {/* ── Body ── */}
+      <div style={S.body}>
 
-      {/* ── Main content ── */}
-      <main style={styles.main}>
-        {viewMode === "3d" ? (
-          <SimView rawJson={rawJson} simData={simData} />
-        ) : mode === "stamps" ? (
-          // Stamp editor: palette sidebar + interactive canvas
-          <div style={styles.editorRow}>
-            <StampPalette
-              selectedType={selectedStampType}
-              onSelect={setSelectedStampType}
-            />
-            <FloorCanvas
+        {/* ── Main content ── */}
+        <div style={S.mainArea}>
+          {viewMode === "3d" ? (
+            <SimView rawJson={rawJson} />
+          ) : canEdit ? (
+            <div style={S.editorRow}>
+              <StampPalette selectedType={selectedStampType} onSelect={setSelectedStampType} />
+              <FloorCanvas
+                grid={currentGrid}
+                floorIndex={activeFloor}
+                roomLabels={roomLabels}
+                cellProperties={cellProperties}
+                stamps={stampsPerFloor[activeFloor] ?? []}
+                gridWidth={gridMeta.width}
+                gridHeight={gridMeta.height}
+                selectedType={canPlace ? '__scenario__' : selectedStampType}
+                onCellPaint={addStamp}
+                onStampRemove={removeStamp}
+                scenario={liveScenario}
+              />
+            </div>
+          ) : (
+            <GridView
               grid={currentGrid}
               floorIndex={activeFloor}
               roomLabels={roomLabels}
               cellProperties={cellProperties}
-              stamps={stampsPerFloor[activeFloor] ?? []}
-              gridWidth={gridMeta.width}
-              gridHeight={gridMeta.height}
-              selectedType={selectedStampType}
-              onCellPaint={addStamp}
-              onStampRemove={removeStamp}
+              scenario={liveScenario}
+              turnState={null}
             />
+          )}
+        </div>
+
+        {/* ── Scenario sidebar ── */}
+        {showScenario && (
+          <div style={S.sidebar}>
+            <div style={S.sidebarTitle}>Scenario</div>
+
+            {/* Responders */}
+            <div style={S.sideSection}>
+              <div style={S.sideSectionHeader}>
+                <span style={{ ...S.sideLabel, color: C.blue }}>● RESPONDERS</span>
+                <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{responders.length}</span>
+              </div>
+              {responders.map((r, i) => (
+                <EntityRow key={r.id}
+                  entity={r} type="responder" index={i}
+                  floorCount={floorCount}
+                  onRemove={() => removeResponder(r.id)}
+                  onFloorChange={z => updateEntityFloor('responder', r.id, z)}
+                  onCoordChange={(f, v) => updateEntityCoord('responder', r.id, f, v)}
+                />
+              ))}
+              <button
+                style={{ ...S.addBtn, borderColor: C.blueBdr, color: C.blue, background: (canEdit && scenarioMode === 'place-responder') ? C.blueBg : 'transparent' }}
+                onClick={() => {
+                  if (canEdit) {
+                    setScenarioMode(scenarioMode === 'place-responder' ? null : 'place-responder');
+                  } else {
+                    setResponders(prev => [...prev, { id: 'R' + (prev.length + 1), x: 0, y: 0, z: activeFloor }]);
+                  }
+                }}
+              >
+                + {canEdit && scenarioMode === 'place-responder' ? 'Click grid to place…' : 'Add Responder'}
+              </button>
+            </div>
+
+            <div style={S.divider} />
+
+            {/* Victims */}
+            <div style={S.sideSection}>
+              <div style={S.sideSectionHeader}>
+                <span style={{ ...S.sideLabel, color: C.amber }}>● VICTIMS</span>
+                <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{victims.length}</span>
+              </div>
+              {victims.map((v, i) => (
+                <EntityRow key={v.id}
+                  entity={v} type="victim" index={i}
+                  floorCount={floorCount}
+                  onRemove={() => removeVictim(v.id)}
+                  onFloorChange={z => updateEntityFloor('victim', v.id, z)}
+                  onCoordChange={(f, val) => updateEntityCoord('victim', v.id, f, val)}
+                  onMobilityChange={m => updateVictimMobility(v.id, m)}
+                />
+              ))}
+              <button
+                style={{ ...S.addBtn, borderColor: C.amberBdr, color: C.amber, background: (canEdit && scenarioMode === 'place-victim') ? C.amberBg : 'transparent' }}
+                onClick={() => {
+                  if (canEdit) {
+                    setScenarioMode(scenarioMode === 'place-victim' ? null : 'place-victim');
+                  } else {
+                    setVictims(prev => [...prev, { id: 'V' + (prev.length + 1), x: 0, y: 0, z: activeFloor, mobility: 'immobile' }]);
+                  }
+                }}
+              >
+                + {canEdit && scenarioMode === 'place-victim' ? 'Click grid to place…' : 'Add Victim'}
+              </button>
+            </div>
+
+            <div style={S.divider} />
+
+            {/* Threats */}
+            <div style={S.sideSection}>
+              <div style={S.sideSectionHeader}>
+                <span style={{ ...S.sideLabel, color: '#ff6030' }}>🔥 THREATS</span>
+                {threat && <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>1</span>}
+              </div>
+
+              {threat ? (
+                <div style={{ background: 'rgba(255,96,48,.05)', border: '1px solid rgba(255,96,48,.15)', borderRadius: 7, padding: '8px', marginBottom: 5 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 9, color: '#ff6030', fontWeight: 700 }}>FIRE</span>
+                    <button onClick={() => setThreat(null)} style={{ background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4, color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px' }}>✕</button>
+                  </div>
+                  {/* Origin coords */}
+                  <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 4, letterSpacing: '.5px' }}>ORIGIN</div>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+                    {[['x', threat.origin.x], ['y', threat.origin.y]].map(([field, val]) => (
+                      <label key={field} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{field.toUpperCase()}</span>
+                        <input type="number" min={0} value={val}
+                          onChange={e => updateFireOriginCoord(field, e.target.value)}
+                          style={S.entityInput} />
+                      </label>
+                    ))}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>FL</span>
+                      <input type="number" min={0} max={Math.max(0, floorCount - 1)} value={threat.origin.z}
+                        onChange={e => updateFireOriginCoord('z', e.target.value)}
+                        style={S.entityInput} />
+                    </label>
+                  </div>
+                  {/* Fire params */}
+                  <div style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint, marginBottom: 4, letterSpacing: '.5px' }}>PARAMS</div>
+                  {[
+                    ['spread_probability', 'Spread prob', 0, 1, 0.05],
+                    ['stairwell_acceleration', 'Stair accel', 1, 5, 0.1],
+                    ['accelerant_bonus', 'Accel bonus', 0, 1, 0.05],
+                  ].map(([key, label, min, max, step]) => (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint }}>{label}</span>
+                      <input type="number" min={min} max={max} step={step}
+                        value={threat.fire_params?.[key] ?? (key === 'stairwell_acceleration' ? 2.0 : key === 'accelerant_bonus' ? 0.3 : 0.4)}
+                        onChange={e => updateFireParam(key, e.target.value)}
+                        style={{ ...S.entityInput, width: 46, color: '#ff8844' }} />
+                    </div>
+                  ))}
+                  {canEdit && (
+                    <button
+                      style={{ ...S.addBtn, marginTop: 6, borderColor: 'rgba(255,96,48,.3)', color: '#ff6030', background: scenarioMode === 'place-fire' ? 'rgba(255,96,48,.1)' : 'transparent', fontSize: 8 }}
+                      onClick={() => setScenarioMode(scenarioMode === 'place-fire' ? null : 'place-fire')}
+                    >
+                      {scenarioMode === 'place-fire' ? 'Click grid to reposition…' : '↺ Reposition origin'}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  style={{ ...S.addBtn, borderColor: 'rgba(255,96,48,.25)', color: '#ff6030', background: (canEdit && scenarioMode === 'place-fire') ? 'rgba(255,96,48,.1)' : 'transparent' }}
+                  onClick={() => {
+                    if (canEdit) {
+                      setScenarioMode(scenarioMode === 'place-fire' ? null : 'place-fire');
+                    } else {
+                      setThreat({ type: 'fire', origin: { x: 0, y: 0, z: activeFloor }, fire_params: { spread_probability: 0.4, stairwell_acceleration: 2.0, accelerant_bonus: 0.3 } });
+                    }
+                  }}
+                >
+                  + {canEdit && scenarioMode === 'place-fire' ? 'Click grid to place…' : 'Add Fire'}
+                </button>
+              )}
+            </div>
+
+            <div style={S.divider} />
+
+            {/* Summary */}
+            <div style={{ padding: '8px 0' }}>
+              <div style={{ fontFamily: C.mono, fontSize: 7.5, color: C.textFaint, letterSpacing: '.5px', marginBottom: 8 }}>SCENARIO SUMMARY</div>
+              <div style={S.summaryRow}>
+                <span style={S.summaryKey}>Responders</span>
+                <span style={{ ...S.summaryVal, color: C.blue }}>{responders.length}</span>
+              </div>
+              <div style={S.summaryRow}>
+                <span style={S.summaryKey}>Victims</span>
+                <span style={{ ...S.summaryVal, color: C.amber }}>{victims.length}</span>
+              </div>
+              <div style={S.summaryRow}>
+                <span style={S.summaryKey}>Immobile</span>
+                <span style={S.summaryVal}>{victims.filter(v => v.mobility === 'immobile').length}</span>
+              </div>
+              <div style={S.summaryRow}>
+                <span style={S.summaryKey}>Mobile</span>
+                <span style={S.summaryVal}>{victims.filter(v => v.mobility !== 'immobile').length}</span>
+              </div>
+              <div style={S.summaryRow}>
+                <span style={S.summaryKey}>Fire threat</span>
+                <span style={{ ...S.summaryVal, color: threat ? '#ff6030' : C.textFaint }}>{threat ? `(${threat.origin.x},${threat.origin.y}) fl${threat.origin.z}` : '—'}</span>
+              </div>
+            </div>
+
+            {(responders.length > 0 || victims.length > 0 || threat) && (
+              <button
+                style={{ ...S.addBtn, marginTop: 6, borderColor: C.redBdr, color: C.red, background: C.redBg }}
+                onClick={() => { setResponders([]); setVictims([]); setThreat(null); }}
+              >
+                ✕ Clear all
+              </button>
+            )}
           </div>
-        ) : (
-          // Upload / view mode: read-only grid
-          <GridView
-            grid={currentGrid}
-            floorIndex={activeFloor}
-            roomLabels={roomLabels}
-            cellProperties={cellProperties}
-            scenario={rawJson?.scenario ?? null}
-            turnState={simData ? simData.states[simTurn] : null}
-          />
         )}
-      </main>
+      </div>
 
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Sub-components ─────────────────────────────────────────────────────────
 
-const styles = {
-  // Upload screen
-  uploadScreen: {
-    position:  "relative",
-    minHeight: "100vh",
-    backgroundColor: "#f5f5f5",
-  },
-  backBtn: {
-    position:        "absolute",
-    top:             "1.25rem",
-    left:            "1.25rem",
-    padding:         "0.4rem 0.9rem",
-    fontSize:        "0.85rem",
-    border:          "1px solid #ccc",
-    borderRadius:    "6px",
-    backgroundColor: "#fff",
-    cursor:          "pointer",
-    color:           "#444",
-    zIndex:          10,
-  },
+function LandingCard({ icon, tag, accent, title, desc, onClick }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        width: 220, padding: '24px 20px', borderRadius: 14, cursor: 'pointer',
+        background: hov ? 'rgba(255,255,255,.04)' : 'rgba(255,255,255,.02)',
+        border: `1px solid ${hov ? accent + '40' : 'rgba(255,255,255,.07)'}`,
+        transition: 'all .2s', display: 'flex', flexDirection: 'column', alignItems: 'center',
+        gap: 8, textAlign: 'center',
+        boxShadow: hov ? `0 8px 32px rgba(0,0,0,.4)` : 'none',
+        transform: hov ? 'translateY(-2px)' : 'none',
+      }}
+    >
+      <span style={{ fontSize: 28 }}>{icon}</span>
+      <span style={{ fontFamily: C.mono, fontSize: 7.5, color: accent, letterSpacing: '1.5px', background: accent + '18', padding: '2px 8px', borderRadius: 4, border: `1px solid ${accent}30` }}>
+        {tag}
+      </span>
+      <div style={{ fontFamily: C.sans, fontWeight: 700, fontSize: 16, color: '#fff' }}>{title}</div>
+      <div style={{ fontFamily: C.mono, fontSize: 9.5, color: C.textDim, lineHeight: 1.6 }}>{desc}</div>
+    </div>
+  );
+}
 
-  // Landing
-  landing: {
-    display: "flex", flexDirection: "column", alignItems: "center",
-    justifyContent: "center", minHeight: "100vh",
-    backgroundColor: "#f5f5f5", fontFamily: "sans-serif", padding: "2rem",
-  },
-  landingTitle:    { fontSize: "2rem", marginBottom: "0.25rem" },
-  landingSubtitle: { color: "#666", marginBottom: "2rem" },
-  landingCards:    { display: "flex", gap: "1.5rem", flexWrap: "wrap", justifyContent: "center" },
-  card: {
-    backgroundColor: "#fff", border: "1px solid #ddd", borderRadius: "12px",
-    padding: "1.5rem", width: "220px", cursor: "pointer",
-    display: "flex", flexDirection: "column", alignItems: "center",
-    textAlign: "center", gap: "0.5rem",
-    transition: "box-shadow 0.15s",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-  },
-  cardIcon:  { fontSize: "2rem" },
-  cardTitle: { fontSize: "1.1rem", fontWeight: "700", margin: 0 },
-  cardDesc:  { fontSize: "0.8rem", color: "#666", margin: 0 },
+function PostBtn({ icon, label, desc, onClick, primary }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+        gap: 6, padding: '16px 12px',
+        border: `1px solid ${hov ? (primary ? C.accentBdr : C.borderHi) : (primary ? C.accentBdr : C.border)}`,
+        borderRadius: 10, cursor: 'pointer',
+        background: hov ? (primary ? C.accentBg : 'rgba(255,255,255,.04)') : (primary ? 'rgba(91,240,165,.04)' : 'rgba(255,255,255,.02)'),
+        transition: 'all .15s',
+      }}
+    >
+      <span style={{ fontSize: 22 }}>{icon}</span>
+      <span style={{ fontFamily: C.sans, fontWeight: 700, fontSize: 13, color: primary ? C.accent : C.text }}>{label}</span>
+      <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textDim, lineHeight: 1.5, textAlign: 'center' }}>{desc}</span>
+    </button>
+  );
+}
 
-  // Post-upload decision
-  postUploadCard: {
-    backgroundColor: "#fff", border: "1px solid #ddd", borderRadius: "16px",
-    padding: "2rem", maxWidth: "480px", width: "100%",
-    display: "flex", flexDirection: "column", alignItems: "center",
-    gap: "0.75rem", textAlign: "center",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-  },
-  postUploadTitle:    { fontSize: "1.3rem", fontWeight: "700", margin: 0 },
-  postUploadMeta:     { fontSize: "0.8rem", color: "#888", margin: 0 },
-  postUploadQuestion: { fontSize: "0.95rem", color: "#444", margin: "0.5rem 0 0" },
-  postUploadActions:  { display: "flex", gap: "0.75rem", width: "100%", marginTop: "0.25rem" },
-  actionBtn: {
-    flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-    gap: "0.3rem", padding: "1rem 0.75rem",
-    border: "1.5px solid #ddd", borderRadius: "10px",
-    backgroundColor: "#fafafa", cursor: "pointer",
-    transition: "border-color 0.15s, box-shadow 0.15s",
-  },
-  actionBtnPrimary: {
-    borderColor: "#2563eb", backgroundColor: "#eff6ff",
-  },
-  actionIcon: { fontSize: "1.5rem" },
-  actionLabel: { fontSize: "0.9rem", fontWeight: "700", color: "#1a1a1a" },
-  actionDesc:  { fontSize: "0.72rem", color: "#666", lineHeight: 1.4 },
-  postUploadBack: {
-    background: "none", border: "none", cursor: "pointer",
-    fontSize: "0.8rem", color: "#888", marginTop: "0.5rem",
-    textDecoration: "underline",
-  },
+function EntityRow({ entity, type, index, floorCount, onRemove, onFloorChange, onCoordChange, onMobilityChange }) {
+  const accent = type === 'responder' ? C.blue : C.amber;
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,.02)', border: `1px solid rgba(255,255,255,.05)`,
+      borderRadius: 7, padding: '7px 8px', marginBottom: 5,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+        <span style={{ fontFamily: C.mono, fontSize: 9, color: accent, fontWeight: 700 }}>{entity.id}</span>
+        <button onClick={onRemove} style={{
+          background: C.redBg, border: `1px solid ${C.redBdr}`, borderRadius: 4,
+          color: C.red, cursor: 'pointer', fontFamily: C.mono, fontSize: 8, padding: '1px 5px',
+        }}>✕</button>
+      </div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {[['x', entity.x], ['y', entity.y]].map(([field, val]) => (
+          <label key={field} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>{field.toUpperCase()}</span>
+            <input type="number" min={0} value={val}
+              onChange={e => onCoordChange(field, e.target.value)}
+              style={S.entityInput} />
+          </label>
+        ))}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <span style={{ fontFamily: C.mono, fontSize: 7, color: C.textFaint }}>FL</span>
+          <input type="number" min={0} max={Math.max(0, floorCount - 1)} value={entity.z}
+            onChange={e => onFloorChange(e.target.value)}
+            style={S.entityInput} />
+        </label>
+        {type === 'victim' && (
+          <select value={entity.mobility || 'immobile'}
+            onChange={e => onMobilityChange?.(e.target.value)}
+            style={S.mobilitySelect}>
+            <option value="immobile">immobile</option>
+            <option value="mobile">mobile</option>
+            <option value="injured">injured</option>
+          </select>
+        )}
+      </div>
+    </div>
+  );
+}
 
-  // Editor
-  wrapper: {
-    display: "flex", flexDirection: "column", alignItems: "stretch",
-    minHeight: "100vh", backgroundColor: "#f5f5f5",
-    fontFamily: "sans-serif", padding: "1rem 1.5rem", gap: "0.75rem",
-  },
-  header: {
-    display: "flex", alignItems: "flex-start",
-    justifyContent: "space-between", width: "100%",
-  },
-  title:        { fontSize: "1.5rem", margin: 0, fontWeight: "700", color: "#1a1a1a" },
-  buildingName: { fontSize: "0.9rem", color: "#555", margin: "0.2rem 0 0 0" },
-  modeBadge:    { fontSize: "0.8rem", color: "#2563eb", margin: "0.2rem 0 0 0" },
-  headerRight: {
-    display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0,
-  },
-  dimControls: {
-    display: "flex", alignItems: "center", gap: "0.35rem",
-    backgroundColor: "#fff", border: "1px solid #ddd",
-    borderRadius: "8px", padding: "0.3rem 0.75rem",
-  },
-  dimLabel: {
-    display: "flex", alignItems: "center", gap: "0.25rem",
-    fontSize: "0.78rem", color: "#555", fontWeight: "600",
-  },
-  dimInput: {
-    width: "46px", padding: "0.2rem 0.3rem", fontSize: "0.8rem",
-    border: "1px solid #ddd", borderRadius: "4px", textAlign: "center",
-  },
-  dimSep: { fontSize: "0.8rem", color: "#aaa" },
-  resetBtn: {
-    padding: "0.4rem 0.9rem", fontSize: "0.85rem",
-    border: "1px solid #ccc", borderRadius: "6px",
-    backgroundColor: "#fff", cursor: "pointer", color: "#444", flexShrink: 0,
-  },
-  simControls: {
-    display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0,
-  },
-  simBtn: {
-    padding: "0.4rem 1rem", fontSize: "0.85rem", fontWeight: "700",
-    border: "none", borderRadius: "6px",
-    backgroundColor: "#2563eb", cursor: "pointer", color: "#fff", flexShrink: 0,
-  },
-  simBtnLoading: {
-    backgroundColor: "#6b9ed4", cursor: "not-allowed",
-  },
-  simSuccess: {
-    fontSize: "0.8rem", color: "#16a34a", fontWeight: "600",
-  },
-  simError: {
-    fontSize: "0.8rem", color: "#dc2626", fontWeight: "600", cursor: "help",
-  },
-  main: {
-    width:         "100%",
-    display:       "flex",
-    flexDirection: "column",
-    alignItems:    "stretch",
-    gap:           "0.75rem",
-    flex:          1,
-  },
-  editorRow: {
-    display:    "flex",
-    gap:        "1rem",
-    alignItems: "flex-start",
-    width:      "100%",
-    flex:       1,
-  },
-  viewTabs: {
-    display:       "flex",
-    gap:           "0.5rem",
-    width:         "100%",
-    borderBottom:  "2px solid #e5e7eb",
-  },
-  viewTab: {
-    padding:         "0.45rem 1.1rem",
-    fontSize:        "0.85rem",
-    fontWeight:      "600",
-    border:          "1px solid #ddd",
-    borderBottom:    "2px solid transparent",
-    borderRadius:    "6px 6px 0 0",
-    backgroundColor: "#f5f5f5",
-    cursor:          "pointer",
-    color:           "#666",
-    marginBottom:    "-2px",
-    transition:      "background-color 0.15s, color 0.15s",
-  },
-  viewTabActive: {
-    backgroundColor: "#fff",
-    color:           "#1a1a1a",
-    borderColor:     "#e5e7eb",
-    borderBottomColor: "#fff",
-  },
-  turnBar: {
-    display:         "flex",
-    alignItems:      "center",
-    gap:             "0.5rem",
-    padding:         "0.4rem 0.75rem",
-    backgroundColor: "#fff",
-    border:          "1px solid #e5e7eb",
-    borderRadius:    "8px",
-    width:           "100%",
-  },
-  turnBtn: {
-    padding:         "0.2rem 0.6rem",
-    fontSize:        "0.8rem",
-    border:          "1px solid #ddd",
-    borderRadius:    "5px",
-    backgroundColor: "#fff",
-    cursor:          "pointer",
-    color:           "#444",
-    flexShrink:      0,
-  },
-  turnScrubber: {
-    flex:    1,
-    cursor:  "pointer",
-    accentColor: "#2563eb",
-  },
-  turnLabel: {
-    fontSize:   "0.78rem",
-    color:      "#555",
-    fontFamily: "monospace",
-    flexShrink: 0,
-    minWidth:   "120px",
-    textAlign:  "right",
-  },
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SetupScreen — dimension picker shown before entering stamp editor
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ── Setup screen ────────────────────────────────────────────────────────────
 function SetupScreen({ meta, onChange, onConfirm, onBack }) {
   function field(label, key, min, max) {
     return (
-      <label style={setup.field}>
-        <span style={setup.fieldLabel}>{label}</span>
-        <input
-          type="number" min={min} max={max} value={meta[key]}
-          onChange={e => onChange({ ...meta, [key]: Math.max(min, Math.min(max, Number(e.target.value) || min)) })}
-          style={setup.input}
-        />
-        <span style={setup.fieldHint}>{min}–{max}</span>
-      </label>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.05)', borderRadius: 8 }}>
+        <span style={{ fontFamily: C.sans, fontSize: 13, fontWeight: 600, color: C.text }}>{label}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input type="number" min={min} max={max} value={meta[key]}
+            onChange={e => onChange({ ...meta, [key]: Math.max(min, Math.min(max, Number(e.target.value) || min)) })}
+            style={{ width: 64, padding: '5px 8px', textAlign: 'center', fontFamily: C.mono, fontSize: 13, background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 6, color: C.accent, outline: 'none' }} />
+          <span style={{ fontFamily: C.mono, fontSize: 8, color: C.textFaint }}>{min}–{max}</span>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div style={setup.wrapper}>
-      <div style={setup.card}>
-        <span style={{ fontSize: "2rem" }}>📐</span>
-        <h2 style={setup.title}>Set up your floor plan</h2>
-        <p style={setup.subtitle}>
-          Choose the grid size and number of floors. A wall border is placed automatically.
-          You can resize at any time from the editor header.
-        </p>
-
-        <div style={setup.fields}>
+    <div style={S.fullPage}>
+      <div style={S.postCard}>
+        <div style={{ fontFamily: C.mono, fontSize: 8, color: 'rgba(91,240,165,.5)', letterSpacing: '2px', marginBottom: 12 }}>
+          NEW FLOOR PLAN
+        </div>
+        <div style={{ fontFamily: C.sans, fontWeight: 700, fontSize: 20, color: '#fff', marginBottom: 4 }}>
+          Set up your floor plan
+        </div>
+        <div style={{ fontFamily: C.mono, fontSize: 9, color: C.textDim, marginBottom: 24, lineHeight: 1.6 }}>
+          Choose grid size and floors. A wall border is placed automatically.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', marginBottom: 16 }}>
           {field("Width (cells)",  "width",      3, 50)}
           {field("Height (cells)", "height",     3, 50)}
           {field("Floors",         "floorCount", 1, 20)}
         </div>
-
-        <p style={setup.preview}>
-          Canvas: {meta.width} × {meta.height} cells · {meta.floorCount} floor{meta.floorCount !== 1 ? "s" : ""}
-        </p>
-
-        <div style={setup.actions}>
-          <button style={setup.backBtn} onClick={onBack}>← Back</button>
-          <button style={setup.confirmBtn} onClick={onConfirm}>
-            Create floor plan →
-          </button>
+        <div style={{ fontFamily: C.mono, fontSize: 8.5, color: C.textFaint, marginBottom: 20 }}>
+          {meta.width} × {meta.height} cells · {meta.floorCount} floor{meta.floorCount !== 1 ? 's' : ''}
+        </div>
+        <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+          <button style={S.textBtn} onClick={onBack}>← Back</button>
+          <button style={S.accentBtn} onClick={onConfirm}>Create floor plan →</button>
         </div>
       </div>
     </div>
   );
 }
 
-const setup = {
-  wrapper: {
-    display: "flex", alignItems: "center", justifyContent: "center",
-    minHeight: "100vh", backgroundColor: "#f5f5f5",
-    fontFamily: "sans-serif", padding: "2rem",
+// ── Styles ───────────────────────────────────────────────────────────────────
+const S = {
+  // Full-page dark screen
+  fullPage: {
+    minHeight: '100vh', background: C.bg,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontFamily: C.sans, padding: '2rem',
   },
-  card: {
-    backgroundColor: "#fff", border: "1px solid #ddd", borderRadius: "16px",
-    padding: "2rem", maxWidth: "400px", width: "100%",
-    display: "flex", flexDirection: "column", alignItems: "center",
-    gap: "0.75rem", textAlign: "center",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+  landingWrap: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
   },
-  title:    { fontSize: "1.3rem", fontWeight: "700", margin: 0 },
-  subtitle: { fontSize: "0.8rem", color: "#666", margin: 0, lineHeight: 1.5 },
-  fields:   { display: "flex", flexDirection: "column", gap: "0.6rem", width: "100%", marginTop: "0.5rem" },
-  field: {
-    display: "flex", alignItems: "center", justifyContent: "space-between",
-    gap: "0.5rem", backgroundColor: "#f9f9f9",
-    border: "1px solid #eee", borderRadius: "8px", padding: "0.5rem 0.75rem",
+  postCard: {
+    background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)',
+    borderRadius: 16, padding: '28px 28px 24px', maxWidth: 440, width: '100%',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+    boxShadow: '0 8px 40px rgba(0,0,0,.4)',
   },
-  fieldLabel: { fontSize: "0.85rem", fontWeight: "600", color: "#333", flex: 1, textAlign: "left" },
-  input: {
-    width: "60px", padding: "0.25rem 0.4rem", fontSize: "0.9rem",
-    border: "1px solid #ddd", borderRadius: "6px", textAlign: "center",
+  floatBack: {
+    position: 'absolute', top: 14, left: 14,
+    padding: '6px 14px', background: 'rgba(255,255,255,.04)',
+    border: '1px solid rgba(255,255,255,.08)', borderRadius: 7,
+    color: 'rgba(255,255,255,.4)', cursor: 'pointer',
+    fontFamily: C.mono, fontSize: 10, letterSpacing: '.5px',
   },
-  fieldHint: { fontSize: "0.7rem", color: "#bbb", minWidth: "36px", textAlign: "right" },
-  preview: { fontSize: "0.8rem", color: "#888", margin: 0 },
-  actions: { display: "flex", gap: "0.75rem", width: "100%", marginTop: "0.25rem" },
-  backBtn: {
-    flex: 1, padding: "0.6rem", fontSize: "0.85rem",
-    border: "1px solid #ccc", borderRadius: "8px",
-    backgroundColor: "#fff", cursor: "pointer", color: "#444",
+  textLink: {
+    background: 'none', border: 'none', cursor: 'pointer',
+    fontFamily: C.mono, fontSize: 9, color: C.textFaint,
+    letterSpacing: '.3px', textDecoration: 'underline',
   },
-  confirmBtn: {
-    flex: 2, padding: "0.6rem", fontSize: "0.9rem", fontWeight: "700",
-    border: "none", borderRadius: "8px",
-    backgroundColor: "#2563eb", cursor: "pointer", color: "#fff",
+  textBtn: {
+    flex: 1, padding: '9px', fontFamily: C.mono, fontSize: 10,
+    border: '1px solid rgba(255,255,255,.08)', borderRadius: 8,
+    background: 'rgba(255,255,255,.03)', color: C.textDim, cursor: 'pointer',
+    letterSpacing: '.5px',
   },
+  accentBtn: {
+    flex: 2, padding: '9px', fontFamily: C.mono, fontSize: 10, fontWeight: 700,
+    border: `1px solid ${C.accentBdr}`, borderRadius: 8,
+    background: C.accentBg, color: C.accent, cursor: 'pointer',
+    letterSpacing: '.5px',
+  },
+
+  // ── Shell (editor) ──
+  shell: {
+    height: '100vh', background: C.bg, fontFamily: C.sans,
+    display: 'flex', flexDirection: 'column', overflow: 'hidden', color: '#fff',
+  },
+  topbar: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    gap: 12, padding: '10px 18px',
+    background: 'rgba(10,10,18,.95)', borderBottom: '1px solid rgba(255,255,255,.06)',
+    backdropFilter: 'blur(20px)', flexShrink: 0, zIndex: 10,
+  },
+  dimRow: {
+    display: 'flex', alignItems: 'center', gap: 8,
+    padding: '4px 10px', background: 'rgba(0,0,0,.3)',
+    border: '1px solid rgba(255,255,255,.07)', borderRadius: 7,
+  },
+  dimLabel: { display: 'flex', alignItems: 'center', gap: 4 },
+  dimLblTxt: { fontFamily: C.mono, fontSize: 7, color: C.textFaint, letterSpacing: '.5px' },
+  dimInput: {
+    width: 44, padding: '3px 5px', textAlign: 'center',
+    fontFamily: C.mono, fontSize: 11,
+    background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.08)',
+    borderRadius: 5, color: C.accent, outline: 'none',
+  },
+  topBtn: {
+    padding: '5px 12px', fontFamily: C.mono, fontSize: 9, letterSpacing: '.5px',
+    background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)',
+    borderRadius: 7, color: C.textDim, cursor: 'pointer',
+  },
+  topBtnDanger: {
+    padding: '5px 12px', fontFamily: C.mono, fontSize: 9, letterSpacing: '.5px',
+    background: 'rgba(255,60,60,.04)', border: '1px solid rgba(255,60,60,.1)',
+    borderRadius: 7, color: 'rgba(255,100,100,.4)', cursor: 'pointer',
+  },
+  tabRow: {
+    display: 'flex', alignItems: 'center', gap: 2, padding: '6px 18px 0',
+    background: 'rgba(10,10,18,.8)', borderBottom: '1px solid rgba(255,255,255,.06)',
+    flexShrink: 0,
+  },
+  tab: {
+    padding: '6px 16px', fontFamily: C.mono, fontSize: 9, letterSpacing: '.5px',
+    background: 'transparent', border: '1px solid transparent',
+    borderRadius: '6px 6px 0 0', cursor: 'pointer',
+    color: C.textDim, marginBottom: -1, transition: 'all .15s',
+  },
+  tabActive: {
+    background: 'rgba(255,255,255,.04)', color: '#fff',
+    borderColor: 'rgba(255,255,255,.08)', borderBottomColor: C.bg,
+  },
+  body: {
+    flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden',
+  },
+  mainArea: {
+    flex: 1, minWidth: 0, overflow: 'auto',
+    display: 'flex', flexDirection: 'column',
+  },
+  editorRow: {
+    display: 'flex', gap: '1rem', alignItems: 'flex-start',
+    width: '100%', flex: 1, padding: '12px',
+  },
+
+  // ── Scenario sidebar ──
+  sidebar: {
+    width: 220, flexShrink: 0, background: 'rgba(10,10,18,.95)',
+    borderLeft: '1px solid rgba(255,255,255,.06)',
+    padding: '12px', overflowY: 'auto',
+    display: 'flex', flexDirection: 'column',
+  },
+  sidebarTitle: {
+    fontFamily: C.sans, fontWeight: 700, fontSize: 13, color: C.text,
+    letterSpacing: -.2, marginBottom: 12,
+  },
+  sideSection: { marginBottom: 2 },
+  sideSectionHeader: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6,
+  },
+  sideLabel: {
+    fontFamily: C.mono, fontSize: 7.5, letterSpacing: '1px', textTransform: 'uppercase',
+  },
+  divider: {
+    height: 1, background: 'rgba(255,255,255,.05)', margin: '10px 0',
+  },
+  addBtn: {
+    width: '100%', padding: '7px 10px', fontFamily: C.mono, fontSize: 8.5,
+    letterSpacing: '.5px', border: '1px dashed', borderRadius: 7,
+    cursor: 'pointer', textAlign: 'center', transition: 'all .15s',
+    marginTop: 2,
+  },
+  entityInput: {
+    width: 38, padding: '3px 4px', textAlign: 'center',
+    fontFamily: C.mono, fontSize: 10,
+    background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)',
+    borderRadius: 4, color: '#fff', outline: 'none',
+  },
+  mobilitySelect: {
+    padding: '3px 5px', fontFamily: C.mono, fontSize: 8,
+    background: 'rgba(0,0,0,.4)', border: '1px solid rgba(255,255,255,.08)',
+    borderRadius: 4, color: C.amber, outline: 'none', cursor: 'pointer',
+  },
+  summaryRow: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,.03)',
+  },
+  summaryKey: { fontFamily: C.mono, fontSize: 8, color: C.textFaint },
+  summaryVal: { fontFamily: C.mono, fontSize: 9, fontWeight: 700, color: C.textDim },
 };

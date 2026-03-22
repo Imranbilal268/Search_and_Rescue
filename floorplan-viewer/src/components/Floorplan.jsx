@@ -195,6 +195,19 @@ function CellLabel({ col, row, size, text }) {
 // AGENT / FIRE OVERLAYS — drawn on top of the grid
 // ─────────────────────────────────────────────────────────────────────────────
 
+function FireOriginMarker({ col, row, size }) {
+  const x  = PADDING + col * size;
+  const y  = PADDING + row * size;
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  return (
+    <g>
+      <rect x={x} y={y} width={size} height={size} fill="rgba(255,96,48,0.18)" stroke="#ff6030" strokeWidth={1.5} strokeDasharray="3,2" />
+      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.38} style={{ userSelect: 'none' }}>🔥</text>
+    </g>
+  );
+}
+
 function FireOverlay({ col, row, size, isFrontier }) {
   const x = PADDING + col * size;
   const y = PADDING + row * size;
@@ -391,6 +404,14 @@ export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellP
           const [x, y] = key.split(",").map(Number);
           return <FireOverlay key={`front-${key}`} col={x} row={y} size={CELL_SIZE} isFrontier={true} />;
         })}
+        {/* Fire origin marker (editor mode only — no turnState) */}
+        {!turnState && (() => {
+          const t = scenario?.threat;
+          if (!t || t.type !== 'fire') return null;
+          const { x, y, z } = t.origin ?? {};
+          if (z !== floorIndex) return null;
+          return <FireOriginMarker key="fire-origin" col={x} row={y} size={CELL_SIZE} />;
+        })()}
         {/* Agent overlays */}
         {responderMarkers.map(r => (
           <ResponderMarker key={`r-${r.id}`} col={r.col} row={r.row} size={CELL_SIZE} id={r.id} status={r.status} />

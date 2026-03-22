@@ -4,27 +4,34 @@ import { CELL_STYLES, CELL_DESCRIPTIONS } from "./CellStyles";
 // ─────────────────────────────────────────────────────────────────────────────
 // FileUpload
 //
-// Accepts two JSON shapes:
+// Canonical format (rescuegrid v1):
+//   {
+//     "building": {
+//       "meta": { "schema_version": "1.0", "name": "...", "floors": N, "width": W, "height": H },
+//       "floor_labels": { "0": "Ground Floor", "1": "First Floor", ... },
+//       "grid": [ [[...floor0...]], [[...floor1...]] ],   ← [z][y][x]
+//       "room_labels":          { "x,y,z": "Room name", ... },
+//       "cell_properties":      { "x,y,z": { label, locked }, ... },
+//       "vertical_connections": [...],
+//       "exit_nodes":           [...]
+//     },
+//     "scenario": { "responders": [...], "victims": [...], "threat": {...},
+//                   "simulation_config": { "max_turns": N, ... } }
+//   }
 //
-//  LEGACY (flat array):
-//    { "anyKey": [ [[...floor0...]], [[...floor1...]] ] }
-//
-//  RICH (building object):
-//    {
-//      "building": {
-//        "name": "...",
-//        "grid": [ [[...floor0...]], [[...floor1...]] ],
-//        "room_labels":     { "x,y,z": "Room name", ... },
-//        "cell_properties": { "x,y,z": { label, ... }, ... }
-//      }
-//    }
+// Also accepts legacy flat format:
+//   { "anyKey": [ [[...floor0...]], [[...floor1...]] ] }
 //
 // onLoad is called with a normalised object:
 //   {
-//     floors:         string[][][]   — the 3D grid  [z][y][x]
-//     buildingName:   string | null
-//     roomLabels:     { "x,y,z": string }   (empty object if not present)
-//     cellProperties: { "x,y,z": object }   (empty object if not present)
+//     floors:              string[][][]
+//     buildingName:        string | null
+//     roomLabels:          { "x,y,z": string }
+//     cellProperties:      { "x,y,z": object }
+//     floorLabels:         { "0": string, ... }
+//     verticalConnections: array
+//     exitNodes:           array
+//     rawJson:             the original parsed object
 //   }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -50,16 +57,20 @@ export default function FileUpload({ onLoad }) {
         if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
           throw new Error("Top-level JSON must be an object.");
 
-        let floors, buildingName, roomLabels, cellProperties;
+        let floors, buildingName, roomLabels, cellProperties,
+            floorLabels = {}, verticalConnections = [], exitNodes = [];
 
         // ── Detect schema format ──────────────────────────────────────────
         if (parsed.building && typeof parsed.building === "object" && Array.isArray(parsed.building.grid)) {
-          // RICH format — also covers rescuegrid-v1 (building.meta + scenario)
+          // Canonical rescuegrid-v1 format (building.meta + scenario) or older RICH format
           const b       = parsed.building;
           floors         = b.grid;
           buildingName   = b.meta?.name ?? b.name ?? null;
-          roomLabels     = b.room_labels     ?? {};
-          cellProperties = b.cell_properties ?? {};
+          roomLabels     = b.room_labels          ?? {};
+          cellProperties = b.cell_properties      ?? {};
+          floorLabels         = b.floor_labels         ?? {};
+          verticalConnections = b.vertical_connections ?? [];
+          exitNodes           = b.exit_nodes           ?? [];
         } else {
           // LEGACY format — grab the first key whose value is a 3-D array
           const firstKey = Object.keys(parsed)[0];
@@ -70,10 +81,13 @@ export default function FileUpload({ onLoad }) {
               `Could not detect a valid schema. ` +
               `Expected either a "building.grid" array or a top-level 3-D array.`
             );
-          floors         = val;
-          buildingName   = null;
-          roomLabels     = {};
-          cellProperties = {};
+          floors              = val;
+          buildingName        = null;
+          roomLabels          = {};
+          cellProperties      = {};
+          floorLabels         = {};
+          verticalConnections = [];
+          exitNodes           = [];
         }
 
         // ── Validate grid ─────────────────────────────────────────────────
@@ -91,8 +105,8 @@ export default function FileUpload({ onLoad }) {
 
         setError(null);
         setFileName(file.name);
-        // Pass full raw JSON so EditorShell can send it to the simulation API
-        onLoad({ floors, buildingName, roomLabels, cellProperties, rawJson: parsed });
+        onLoad({ floors, buildingName, roomLabels, cellProperties,
+                 floorLabels, verticalConnections, exitNodes, rawJson: parsed });
 
       } catch (err) {
         setError(`Invalid JSON: ${err.message}`);
@@ -164,31 +178,38 @@ export default function FileUpload({ onLoad }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SCHEMA_EXAMPLE =
-`── RICH FORMAT (recommended) ──────────────────────
+`── CANONICAL FORMAT (rescuegrid v1) ────────────────
 {
   "building": {
-    "name": "My Building",
-    "grid": [              ← [z][y][x] 3-D array
+    "meta": {
+      "schema_version": "1.0",
+      "name": "My Building",
+      "floors": 2, "width": 18, "height": 16
+    },
+    "floor_labels": { "0": "Ground Floor", "1": "First Floor" },
+    "grid": [                ← [z][y][x] 3-D array
       [ ["wall","floor",...], ... ],   ← floor 0
       [ ["wall","floor",...], ... ]    ← floor 1
     ],
-    "room_labels": {       ← optional
-      "x,y,z": "Kitchen",
-      "x,y,z": "Bedroom"
-    },
-    "cell_properties": {   ← optional
-      "x,y,z": { "label": "Front door", "locked": false }
-    }
+    "room_labels":     { "x,y,z": "Kitchen" },
+    "cell_properties": { "x,y,z": { "label": "Front door", "locked": false } },
+    "vertical_connections": [
+      { "id": "stair_main", "type": "stairwell", "x": 8, "y": 6, "floors": [0,1] }
+    ],
+    "exit_nodes": [
+      { "id": "exit_main", "x": 8, "y": 13, "z": 0, "label": "Main Exit" }
+    ]
+  },
+  "scenario": {
+    "responders": [ { "id": "R1", "x": 0, "y": 0, "z": 0 } ],
+    "victims":    [ { "id": "V1", "x": 5, "y": 5, "z": 0, "mobility": "immobile" } ],
+    "threat": { "type": "fire", "origin": { "x": 10, "y": 2, "z": 0 } },
+    "simulation_config": { "max_turns": 40 }
   }
 }
 
-── LEGACY FORMAT (also supported) ─────────────────
-{
-  "anyKey": [
-    [ ["wall","floor",...], ... ],  ← floor 0
-    [ ["wall","floor",...], ... ]   ← floor 1
-  ]
-}`;
+── LEGACY FORMAT (also accepted) ───────────────────
+{ "anyKey": [ [["wall","floor",...], ...], ... ] }`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Styles

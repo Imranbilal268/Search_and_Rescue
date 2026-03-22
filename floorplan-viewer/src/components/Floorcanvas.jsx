@@ -20,6 +20,7 @@ export default function FloorCanvas({
   selectedType,
   onCellPaint,
   onStampRemove,
+  scenario = null,
 }) {
   // ── Refs ──────────────────────────────────────────────────────────────────
   // scrollRef  → the outer scrollable container (getBoundingClientRect for offset)
@@ -107,10 +108,15 @@ export default function FloorCanvas({
     <div style={styles.wrapper}>
 
       {/* Hint bar */}
-      <div style={styles.hint}>
-        {selectedType
-          ? <>Painting <strong>{selectedType}</strong> — drag to fill · right-click to erase</>
-          : <>Select a stamp type from the palette, then drag to paint</>}
+      <div style={{
+        ...styles.hint,
+        ...(selectedType === '__scenario__' ? { background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.25)', color: '#f59e0b' } : {}),
+      }}>
+        {selectedType === '__scenario__'
+          ? <>📍 Click a cell to place the entity — right-click to cancel</>
+          : selectedType
+            ? <>Painting <strong>{selectedType}</strong> — drag to fill · right-click to erase</>
+            : <>Select a stamp type from the palette, then drag to paint</>}
       </div>
 
       {/* Outer scroll container — fills available flex space */}
@@ -131,7 +137,7 @@ export default function FloorCanvas({
             The SVG inside GridView fills this div 1-to-1, so CELL_SIZE math is exact */}
         <div style={{ position: "relative", width: canvasW, height: canvasH, flexShrink: 0 }}>
 
-          {/* Layer 1: compiled grid */}
+          {/* Layer 1: compiled grid + scenario overlays */}
           <div style={styles.gridLayer}>
             <GridView
               grid={grid}
@@ -140,6 +146,7 @@ export default function FloorCanvas({
               cellProperties={cellProperties}
               exactWidth={canvasW}
               exactHeight={canvasH}
+              scenario={scenario}
             />
           </div>
 

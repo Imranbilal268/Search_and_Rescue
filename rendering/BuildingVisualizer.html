@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Block Builder — Realistic</title>
+<title>Search and Rescue — Building Editor & Simulator</title>
 <script src="/three.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;500;700&display=swap');
@@ -197,6 +197,20 @@ canvas{display:block}
 #canvas2d{position:absolute;top:0;left:0;width:100%;height:100%;display:none;cursor:crosshair;z-index:5;pointer-events:none}
 #canvas2d.active{display:block;pointer-events:all}
 
+/* X-Ray opacity slider */
+.xray-slider-wrap{padding:4px 0 6px}
+.xray-slider-label{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,.2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px}
+.xray-slider-row{display:flex;align-items:center;gap:6px}
+.xray-val{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(130,220,255,.6);min-width:28px;text-align:right}
+/* Skybox / ground pickers */
+.sky-row{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.sky-picker{width:24px;height:24px;border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:0;cursor:pointer;background:transparent;-webkit-appearance:none;overflow:hidden}
+.sky-picker::-webkit-color-swatch-wrapper{padding:0}
+.sky-picker::-webkit-color-swatch{border:none;border-radius:4px}
+.sky-label{font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(255,255,255,.2);flex:1;min-width:50px}
+.sky-preset{width:18px;height:18px;border-radius:50%;border:1px solid rgba(255,255,255,.12);cursor:pointer;font-size:0;padding:0;transition:all .12s;background:#0a0a0f}
+.sky-preset:hover{transform:scale(1.2);border-color:rgba(255,255,255,.3)}
+
 :root{--accent:#5bf0a5;--glow:rgba(91,240,165,.25)}
 
 /* ===== SIM MODE: hide all building-tool UI, show only 3D canvas + timeline ===== */
@@ -237,15 +251,15 @@ body.sim-mode #simCamHint{display:block}
 
 
 
-  <!-- TOP: 3D/2D toggle (2D PLAN removed — 2D view handled by the React app) -->
-  <div class="dim-toggle" style="display:none">
-    <button class="dim-btn active" data-dim="3d" onclick="setDim('3d')">3D</button>
-    <button class="dim-btn" data-dim="2d" onclick="setDim('2d')">2D PLAN</button>
+  <!-- TOP: 3D/2D toggle -->
+  <div class="dim-toggle">
+    <button class="dim-btn active" data-dim="3d" onclick="setDim('3d')">3D Viewer</button>
+    <button class="dim-btn" data-dim="2d" onclick="setDim('2d')">2D Editor</button>
   </div>
   <div class="plan-info" id="planInfo">Layer Y<span id="pi-y">0</span> · <span id="pi-m">0.00m</span> · WASD pan · LMB tool · RMB erase · Scroll zoom · [/] layers</div>
 
   <!-- TOP-LEFT: Title -->
-  <div class="top-left"><h1>Block Builder</h1><span class="subtitle">Fire &amp; Structure Sim</span></div>
+  <div class="top-left"><h1>Search and Rescue</h1><span class="subtitle">Building Editor &amp; Simulator</span></div>
   <div id="simCamHint">Drag to rotate · Right-drag to pan · Scroll to zoom</div>
 
   <!-- RIGHT: Tabbed Control Panel -->
@@ -316,6 +330,13 @@ body.sim-mode #simCamHint{display:block}
         <button class="vm-btn" data-vm="xray" onclick="setView('xray')"><span class="vdot" style="background:#8ef"></span>X-Ray</button>
         <button class="vm-btn" data-vm="blueprint" onclick="setView('blueprint')"><span class="vdot" style="background:#46a"></span>Blueprint</button>
         <button class="vm-btn" data-vm="thermal" onclick="setView('thermal')"><span class="vdot" style="background:#f72"></span>Thermal</button>
+        <div class="xray-slider-wrap" id="xraySliderWrap" style="display:none">
+          <div class="xray-slider-label">X-Ray Opacity</div>
+          <div class="xray-slider-row">
+            <span class="xray-val" id="xrayVal">22%</span>
+            <input type="range" id="xraySlider" class="ly-slider" min="5" max="95" value="22" oninput="setXrayOpacity(this.value)">
+          </div>
+        </div>
         <div class="sec-label">Camera</div>
         <div class="cam-grid">
           <button class="cam-btn" onclick="camOrbit(-.3,0)" title="Orbit left (Q)">⟲</button>
@@ -340,6 +361,26 @@ body.sim-mode #simCamHint{display:block}
           <button class="angle-btn" onclick="cThTarget=0;cPhTarget=Math.PI/2-.06" title="Top-down">TOP</button>
         </div>
         <div class="cam-info" id="camInfo">—</div>
+        <div class="sec-label">Skybox</div>
+        <div class="sky-row">
+          <input type="color" id="skyColor" value="#0a0a0f" class="sky-picker" oninput="setSkyColor(this.value)" title="Background color">
+          <span class="sky-label" id="skyLabel">#0a0a0f</span>
+          <button class="sky-preset" onclick="setSkyColor('#0a0a0f')" title="Dark">●</button>
+          <button class="sky-preset" style="background:#1a2a3a" onclick="setSkyColor('#1a2a3a')" title="Night">●</button>
+          <button class="sky-preset" style="background:#4a6a8a" onclick="setSkyColor('#4a6a8a')" title="Overcast">●</button>
+          <button class="sky-preset" style="background:#87CEEB" onclick="setSkyColor('#87CEEB')" title="Day">●</button>
+          <button class="sky-preset" style="background:#ffffff" onclick="setSkyColor('#ffffff')" title="White">●</button>
+        </div>
+        <div class="sec-label">Ground</div>
+        <div class="sky-row">
+          <input type="color" id="groundColorPicker" value="#14141f" class="sky-picker" oninput="setGroundColor(this.value)" title="Ground plane color">
+          <span class="sky-label" id="groundLabel">#14141f</span>
+          <button class="sky-preset" onclick="setGroundColor('#14141f')" title="Dark">●</button>
+          <button class="sky-preset" style="background:#2a2a20" onclick="setGroundColor('#2a2a20')" title="Earth">●</button>
+          <button class="sky-preset" style="background:#3a5a3a" onclick="setGroundColor('#3a5a3a')" title="Grass">●</button>
+          <button class="sky-preset" style="background:#888882" onclick="setGroundColor('#888882')" title="Concrete">●</button>
+          <button class="sky-preset" style="background:#d4c8a0" onclick="setGroundColor('#d4c8a0')" title="Sand">●</button>
+        </div>
       </div>
 
       <!-- LAYERS TAB -->
@@ -468,6 +509,8 @@ const BLOCKS=[
   {name:'THRSHD',  color:0x706050,emissive:0x000000,flamm:0,maxHP:100},
 ];
 let selectedBlock=0,mode='place',currentLayer=0,viewMode='standard';
+let xrayOpacity=0.22, customSkyColor=null;
+let groundColor=0x14141f, gridLineColor=0x252535, gridSubColor=0x1c1c2a;
 const GRID=64,SCALE=0.25,placed=new Map(),fires=new Set(),falling=[];
 const D6=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
 function K(x,y,z){return x+','+y+','+z}
@@ -615,7 +658,7 @@ function rebuildNbrs(gx,gy,gz){
 }
 
 // ===== VIEW MODES =====
-function setView(vm){viewMode=vm;document.querySelectorAll('.vm-btn').forEach(b=>b.classList.toggle('active',b.dataset.vm===vm));applyViewAll();if(dimMode==='2d')draw2d();}
+function setView(vm){viewMode=vm;document.querySelectorAll('.vm-btn').forEach(b=>b.classList.toggle('active',b.dataset.vm===vm));document.getElementById('xraySliderWrap').style.display=vm==='xray'?'block':'none';applyViewAll();if(dimMode==='2d')draw2d();}
 function applyViewAll(){
   switch(viewMode){
     case'standard':scene.fog=new THREE.FogExp2(0x0a0a0f,.006);scene.background.setHex(0x0a0a0f);ambL.color.setHex(0x334466);ambL.intensity=.5;dirL.intensity=1.2;dirL.color.setHex(0xffeedd);filL.intensity=.3;filL.color.setHex(0x5577cc);hemL.intensity=.4;break;
@@ -624,6 +667,11 @@ function applyViewAll(){
     case'blueprint':scene.fog=new THREE.FogExp2(0x0a1428,.005);scene.background.setHex(0x0a1428);ambL.color.setHex(0x2244aa);ambL.intensity=.9;dirL.intensity=.3;dirL.color.setHex(0x4466cc);filL.intensity=.5;filL.color.setHex(0x3355bb);hemL.intensity=.4;break;
     case'thermal':scene.fog=new THREE.FogExp2(0x000000,.008);scene.background.setHex(0x000000);ambL.color.setHex(0x110808);ambL.intensity=.3;dirL.intensity=.15;dirL.color.setHex(0x332211);filL.intensity=.05;hemL.intensity=.1;break;
   }
+  // Apply custom sky color if set
+  if(customSkyColor){const c=parseInt(customSkyColor.slice(1),16);scene.background.setHex(c);scene.fog.color.setHex(c);}
+  // Sync sky picker with current background
+  const bgHex='#'+scene.background.getHexString();
+  document.getElementById('skyColor').value=bgHex;document.getElementById('skyLabel').textContent=bgHex;
   for(const[,e]of placed)applyView(e);
 }
 function applyView(entry){
@@ -634,7 +682,7 @@ function applyView(entry){
   switch(viewMode){
     case'standard':if(!entry.onFire)m.color.setHex(entry.origColor);m.emissive.setHex(b.emissive||0);m.emissiveIntensity=b.emissiveI||0;m.roughness=b.opacity?.1:.7;m.metalness=b.name==='METAL'?.8:.05;break;
     case'wireframe':m.wireframe=true;m.color.setHex(b.isFire?0xff6600:b.flamm===2?0x44bb66:b.flamm===1?0x6688cc:0x4488aa);m.emissive.setHex(0x112244);m.emissiveIntensity=.3;m.transparent=true;m.opacity=.9;m.depthWrite=false;break;
-    case'xray':m.color.setHex(entry.origColor);m.transparent=true;m.opacity=entry.onFire?.6:.22;m.depthWrite=false;m.emissive.setHex(entry.onFire?0xff4400:(b.emissive||0x111122));m.emissiveIntensity=entry.onFire?.5:.15;m.roughness=.3;m.metalness=0;break;
+    case'xray':m.color.setHex(entry.origColor);m.transparent=true;m.opacity=entry.onFire?.6:xrayOpacity;m.depthWrite=false;m.emissive.setHex(entry.onFire?0xff4400:(b.emissive||0x111122));m.emissiveIntensity=entry.onFire?.5:.15;m.roughness=.3;m.metalness=0;break;
     case'blueprint':m.color.setHex(0x1a3366);m.emissive.setHex(entry.onFire?0x884422:0x223388);m.emissiveIntensity=entry.onFire?.6:.25;m.roughness=.5;m.transparent=true;m.opacity=b.opacity?.3:.85;m.depthWrite=true;break;
     case'thermal':{let h=0;if(entry.onFire||b.isFire)h=1;else if(b.igniter)h=.9;else if(entry.integrity<.5)h=.6;else if(entry.integrity<1)h=.35;else{for(const[dx,dy,dz]of D6){const nb=placed.get(K(entry.gx+dx,entry.gy+dy,entry.gz+dz));if(nb&&(nb.onFire||BLOCKS[nb.type].isFire)){h=.25;break;}}}
     const r=h<.5?h*2*.8:.8+(h-.5)*2*.2,g=h<.5?h*.1:h>.7?(h-.7)/.3*.9:.05,bl=h<.3?(1-h/.3)*.5:0;
@@ -652,6 +700,28 @@ function toggleToolbar(){
   tb.classList.toggle('hidden');
   btn.innerHTML=tb.classList.contains('hidden')?'&#x25B2;':'&#x25BC;';
   btn.title=tb.classList.contains('hidden')?'Show materials (M)':'Hide materials (M)';
+}
+function setXrayOpacity(v){
+  xrayOpacity=parseInt(v)/100;
+  document.getElementById('xrayVal').textContent=v+'%';
+  if(viewMode==='xray'){applyViewAll();if(dimMode==='2d')draw2d();}
+}
+function setSkyColor(hex){
+  customSkyColor=hex;
+  document.getElementById('skyColor').value=hex;
+  document.getElementById('skyLabel').textContent=hex;
+  const c=parseInt(hex.slice(1),16);
+  scene.background.setHex(c);scene.fog.color.setHex(c);
+  if(dimMode==='2d') draw2d();
+}
+function setGroundColor(hex){
+  groundColor=parseInt(hex.slice(1),16);
+  const r=(groundColor>>16)&0xff,g=(groundColor>>8)&0xff,b=groundColor&0xff;
+  gridLineColor=((Math.min(255,r+30))<<16)|((Math.min(255,g+30))<<8)|Math.min(255,b+30);
+  gridSubColor=((Math.min(255,r+15))<<16)|((Math.min(255,g+15))<<8)|Math.min(255,b+15);
+  document.getElementById('groundColorPicker').value=hex;
+  document.getElementById('groundLabel').textContent=hex;
+  buildGrid();
 }
 
 // ===== BUILD TOOLS =====
@@ -957,9 +1027,9 @@ const gridGrp=new THREE.Group();scene.add(gridGrp);
 function buildGrid(){
   while(gridGrp.children.length)gridGrp.remove(gridGrp.children[0]);
   const y=currentLayer;
-  const p=new THREE.Mesh(new THREE.PlaneGeometry(GRID,GRID),new THREE.MeshStandardMaterial({color:0x14141f,roughness:.9,metalness:.1}));
+  const p=new THREE.Mesh(new THREE.PlaneGeometry(GRID,GRID),new THREE.MeshStandardMaterial({color:groundColor,roughness:.9,metalness:.1}));
   p.rotation.x=-Math.PI/2;p.position.y=y-.005;p.receiveShadow=true;gridGrp.add(p);
-  const g=new THREE.GridHelper(GRID,GRID,0x252535,0x1c1c2a);g.position.y=y;gridGrp.add(g);
+  const g=new THREE.GridHelper(GRID,GRID,gridLineColor,gridSubColor);g.position.y=y;gridGrp.add(g);
 
   // Meter-interval ruler lines (every 1/SCALE = 4 nodes = 1m)
   const nodesPerM=Math.round(1/SCALE); // 4
