@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Block Builder — Realistic</title>
+<title>Search and Rescue — Building Editor & Simulator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;500;700&display=swap');
@@ -212,7 +212,7 @@ canvas{display:block}
   <div class="plan-info" id="planInfo">Layer Y<span id="pi-y">0</span> · <span id="pi-m">0.00m</span> · WASD pan · LMB tool · RMB erase · Scroll zoom · [/] layers</div>
 
   <!-- TOP-LEFT: Title -->
-  <div class="top-left"><h1>Block Builder</h1><span class="subtitle">Fire &amp; Structure Sim</span></div>
+  <div class="top-left"><h1>Search and Rescue</h1><span class="subtitle">Building Editor &amp; Simulator</span></div>
 
   <!-- RIGHT: Tabbed Control Panel -->
   <div class="ctrl-panel" id="ctrlPanel">
