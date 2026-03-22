@@ -48,8 +48,8 @@
         ["wall",  "floor",  "floor",  "floor",  "wall",  "wall",  "door",  "wall",  "wall",  "floor",  "floor",  "floor",  "wall",  "wall",  "door",  "wall",  "wall",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
         ["wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
         ["wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
-        ["wall",  "wall",  "door",  "wall",  "wall",  "floor",  "floor",  "floor",  "wall",  "wall",  "door",  "wall",  "wall",  "floor",  "floor",  "floor",  "wall",  "wall",  "door",  "wall",  "wall",  "wall"  ],
-        ["wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
+        ["wall",  "wall",  "door",  "wall",  "wall",  "floor",  "floor",  "floor",  "wall",  "wall",  "stairwell",  "stairwell",  "wall",  "floor",  "floor",  "floor",  "wall",  "wall",  "door",  "wall",  "wall",  "wall"  ],
+        ["wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "stairwell",  "stairwell",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
         ["wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall"  ],
         ["wall",  "floor",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
         ["wall",  "floor",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
@@ -109,7 +109,7 @@
       "18,13,2" : {"label": "Bedroom F south window"}
     },
     "vertical_connections": [
-      {"id": "stairwell_main", "type": "stairwell", "label": "Main Stairwell", "x": 10, "y": 6, "floors": [0, 1], "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0},
+      {"id": "stairwell_main", "type": "stairwell", "label": "Main Stairwell", "x": 10, "y": 6, "floors": [0, 1, 2], "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0},
       {"id": "window_bedroom1_west", "type": "window", "label": "Bedroom 1 West Window Exit", "x": 0, "y": 2, "floor": 0, "traversal_cost": 5, "requires": null},
       {"id": "window_bedroom2_west", "type": "window", "label": "Bedroom 2 West Window Exit", "x": 0, "y": 10, "floor": 0, "traversal_cost": 5, "requires": null},
       {"id": "window_bedroom2_south", "type": "window", "label": "Bedroom 2 South Window Exit", "x": 3, "y": 13, "floor": 0, "traversal_cost": 5, "requires": null},

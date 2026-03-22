@@ -92,8 +92,8 @@
         ["wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "wall"  ],
         ["wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "wall"  ],
         ["wall",  "wall",  "door",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "door",  "wall",  "wall"  ],
-        ["wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
-        ["wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
+        ["wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "stairwell",  "stairwell",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
+        ["wall",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "stairwell",  "stairwell",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "floor",  "wall"  ],
         ["wall",  "wall",  "door",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "wall",  "door",  "wall",  "wall",  "door",  "wall",  "wall"  ],
         ["wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "wall"  ],
         ["wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "floor",  "wall",  "floor",  "floor",  "wall"  ],
@@ -214,7 +214,7 @@
       "18,21,3" : {"requires": "ladder", "label": "Room 410 south window"}
     },
     "vertical_connections": [
-      {"id": "stairwell_center", "type": "stairwell", "label": "Central Stairwell", "x": 11, "y": 10, "floors": [0, 1, 2], "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0}
+      {"id": "stairwell_center", "type": "stairwell", "label": "Central Stairwell", "x": 11, "y": 10, "floors": [0, 1, 2, 3], "traversal_cost": 3, "victim_carry_cost_multiplier": 2.0}
     ],
     "exit_nodes": [
       {
