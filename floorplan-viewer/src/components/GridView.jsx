@@ -18,8 +18,10 @@ export default function GridView({
   floorIndex     = 0,
   roomLabels     = {},
   cellProperties = {},
-  exactWidth     = null,   // when set, SVG renders at this exact px width (no scaling)
+  exactWidth     = null,
   exactHeight    = null,
+  scenario       = null,  // scenario object from rawJson?.scenario
+  turnState      = null,  // current simulation turn state
 }) {
   if (!grid || grid.length === 0) {
     return <div style={styles.empty}>No grid data for this floor.</div>;
@@ -34,6 +36,8 @@ export default function GridView({
         cellProperties={cellProperties}
         exactWidth={exactWidth}
         exactHeight={exactHeight}
+        scenario={scenario}
+        turnState={turnState}
       />
     </div>
   );

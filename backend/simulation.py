@@ -78,6 +78,7 @@ def run_simulation(building, scenario, rng=None):
     # Initialise agents
     responders = init_responder_states(scenario["responders"])
     victims    = init_victim_states(scenario["victims"])
+    stuck_turns = {}   # responder_id -> consecutive turns with no assignment
 
     # Initialise threat
     threat_cfg = scenario["threat"]
@@ -190,6 +191,9 @@ def run_simulation(building, scenario, rng=None):
             # else: skip — victim already claimed by a locked responder
         assignments = filtered_assignments
 
+        # Build vic_map BEFORE the responder loop so current victim positions are used
+        vic_map = {v["id"]: v for v in victims}
+
         # Update responder assigned_to
         assigned = {a["responder_id"]: a for a in assignments}
         for r in responders:
@@ -231,12 +235,12 @@ def run_simulation(building, scenario, rng=None):
                 r["assigned_to"]  = a["victim_id"]
                 r["current_path"] = a["path"]
                 r["path_cost"]    = a["cost"]
+                stuck_turns[r["id"]] = 0  # reset on successful assignment
             else:
                 r["assigned_to"]  = None
                 r["current_path"] = []
 
         # Update victim assigned_to
-        vic_map = {v["id"]: v for v in victims}
         for v in victims:
             v["assigned_to"] = None
         for a in assignments:
@@ -274,6 +278,18 @@ def run_simulation(building, scenario, rng=None):
                     })
                     continue
             elif not path or len(path) < 2:
+                # Track how many consecutive turns this responder has no path/assignment
+                if r["status"] == "routing":
+                    stuck_turns[r["id"]] = stuck_turns.get(r["id"], 0) + 1
+                    if stuck_turns[r["id"]] >= 3:
+                        r["status"]      = "blocked"
+                        r["assigned_to"] = None
+                        events.append({
+                            "type":        "responder_blocked",
+                            "description": f"{r['id']} is blocked — no reachable victims for 3+ turns.",
+                            "agents_affected": [r["id"]],
+                            "location":    r["position"],
+                        })
                 continue
 
             # Before advancing, verify the next step is not on fire.
@@ -360,6 +376,14 @@ def run_simulation(building, scenario, rng=None):
                     "agents_affected": [r["id"], r["assigned_to"] or ""],
                     "location":    r["position"],
                 })
+
+        # Sync victim positions to their carrying responder so the turn state
+        # shows victims at the correct (moving) location during extraction.
+        for r in responders:
+            if r["status"] == "carrying" and r["assigned_to"]:
+                v = vic_map.get(r["assigned_to"])
+                if v and v["status"] == "being_extracted":
+                    v["position"] = list(r["position"])
 
         # ── Termination check ─────────────────────────────────────────────────
         all_extracted = all(v["status"] == "extracted" for v in victims)

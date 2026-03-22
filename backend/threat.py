@@ -78,6 +78,11 @@ class FireThreat(ThreatBase):
                 if nbr in new_consumed:
                     continue
 
+                # Only spread to physically adjacent cells (ignore long-distance
+                # window→exit escape-route edges in the graph)
+                if abs(nx - x) + abs(ny - y) + abs(nz - z) > 1:
+                    continue
+
                 # Determine ignition probability
                 ct = grid[nz][ny][nx] if (0 <= nz < floors and 0 <= ny < h and 0 <= nx < w) else "wall"
                 if ct in ("wall", "empty"):

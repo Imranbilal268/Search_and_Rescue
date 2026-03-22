@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Block Builder — Realistic</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/three.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;500;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -170,14 +170,47 @@ canvas{display:block}
 #canvas2d.active{display:block;pointer-events:all}
 
 :root{--accent:#5bf0a5;--glow:rgba(91,240,165,.25)}
+
+/* ===== SIM MODE: hide all building-tool UI, show only 3D canvas + timeline ===== */
+body.sim-mode .toolbar,
+body.sim-mode .ctrl-panel,
+body.sim-mode .hint,
+body.sim-mode .plan-info,
+body.sim-mode .dim-toggle,
+body.sim-mode .top-left{display:none!important}
+body.sim-mode #simBar{bottom:18px}
+body.sim-mode #ui{pointer-events:none}
+body.sim-mode #simBar{pointer-events:all}
+/* Minimal camera-hint overlay */
+#simCamHint{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,.18);pointer-events:none;white-space:nowrap;letter-spacing:.4px;display:none}
+body.sim-mode #simCamHint{display:block}
+
+/* ===== SIMULATION TIMELINE ===== */
+#simBar{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:6px;pointer-events:all;z-index:20;background:rgba(10,10,18,.92);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px 16px;min-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+#simBar.active{display:flex}
+.sim-row{display:flex;align-items:center;gap:8px;width:100%}
+.sim-btn{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.6);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.sim-btn:hover{color:#fff;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2)}
+.sim-btn.play{border-color:rgba(91,240,165,.3);color:var(--accent)}
+.sim-btn.play:hover{background:rgba(91,240,165,.12)}
+#simScrubber{flex:1;-webkit-appearance:none;height:5px;background:rgba(255,255,255,.1);border-radius:3px;outline:none;cursor:pointer}
+#simScrubber::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid rgba(10,10,18,.9);cursor:pointer;box-shadow:0 0 6px var(--glow)}
+#simScrubber::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid rgba(10,10,18,.9);cursor:pointer}
+.sim-turn{font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,.5);min-width:60px;text-align:right;flex-shrink:0}
+.sim-status{font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(255,255,255,.2);letter-spacing:.6px;text-align:center;padding-top:2px}
+.sim-legend{display:flex;gap:10px;align-items:center}
+.sim-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sim-legend-lbl{font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(255,255,255,.3);letter-spacing:.4px}
 </style>
 </head>
 <body>
 <div id="ui">
   <canvas id="canvas2d"></canvas>
 
-  <!-- TOP: 3D/2D toggle -->
-  <div class="dim-toggle">
+
+
+  <!-- TOP: 3D/2D toggle (2D PLAN removed — 2D view handled by the React app) -->
+  <div class="dim-toggle" style="display:none">
     <button class="dim-btn active" data-dim="3d" onclick="setDim('3d')">3D</button>
     <button class="dim-btn" data-dim="2d" onclick="setDim('2d')">2D PLAN</button>
   </div>
@@ -185,6 +218,7 @@ canvas{display:block}
 
   <!-- TOP-LEFT: Title -->
   <div class="top-left"><h1>Block Builder</h1><span class="subtitle">Fire &amp; Structure Sim</span></div>
+  <div id="simCamHint">Drag to rotate · Right-drag to pan · Scroll to zoom</div>
 
   <!-- RIGHT: Tabbed Control Panel -->
   <div class="ctrl-panel" id="ctrlPanel">
@@ -321,6 +355,25 @@ canvas{display:block}
     </div>
   </div>
 
+  <!-- SIMULATION TIMELINE -->
+  <div id="simBar">
+    <div class="sim-row">
+      <button class="sim-btn" onclick="simStep(-1)" title="Previous turn">&#9664;</button>
+      <button class="sim-btn play" id="simPlayBtn" onclick="simTogglePlay()" title="Play/pause">&#9654;</button>
+      <button class="sim-btn" onclick="simStep(1)" title="Next turn">&#9654;&#9654;</button>
+      <input type="range" id="simScrubber" min="0" max="0" value="0" oninput="simGoTo(+this.value)">
+      <span class="sim-turn" id="simTurnLbl">T0 / T0</span>
+    </div>
+    <div class="sim-row" style="justify-content:space-between;padding:0 2px">
+      <div class="sim-legend">
+        <div class="sim-dot" style="background:#3b82f6"></div><span class="sim-legend-lbl">RESPONDER</span>
+        <div class="sim-dot" style="background:#f59e0b"></div><span class="sim-legend-lbl">VICTIM</span>
+        <div class="sim-dot" style="background:#ef4444"></div><span class="sim-legend-lbl">FIRE</span>
+      </div>
+      <div class="sim-status" id="simStatusLbl">—</div>
+    </div>
+  </div>
+
   <!-- BOTTOM: Materials toolbar + hint -->
   <div class="hint">WASD move · Scroll zoom · [/] layers · X mode · P pause · M materials · I solo · U cut · Tab 2D/3D</div>
   <div id="toolbarWrap" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;z-index:15">
@@ -441,14 +494,15 @@ function getDims(type,gx,gy,gz){
     case Ty.TILE:   return [FULL,0.06,FULL];    // thin floor/wall tile
     case Ty.FABRIC: return [0.85,0.7,0.85];     // furniture-sized soft block
     case Ty.DOORPNL: {
-      // Thin door panel — orient based on neighboring walls
-      if(wX||hX) return [0.06,0.85,FULL];  // door in X-running wall: thin along X
-      return [FULL,0.85,0.06];              // door in Z-running wall: thin along Z
+      // Thin door panel — flush with the wall it sits in
+      // wX = wall neighbors in ±X → wall runs along X → panel spans X, thin in Z
+      if(wX||hX) return [FULL,0.85,0.06];
+      return [0.06,0.85,FULL];
     }
     case Ty.DOORFRM: {
-      // Door frame — slightly thicker, matches wall orientation
-      if(wX||hX) return [THIN,FULL,FULL];
-      return [FULL,FULL,THIN];
+      // Door frame — matches wall orientation
+      if(wX||hX) return [FULL,FULL,THIN];
+      return [THIN,FULL,FULL];
     }
     case Ty.STAIRWL: {
       // Stairwell block — uses custom geometry, getDims just for position
@@ -1536,7 +1590,7 @@ const CAM_LERP=0.12; // smoothing factor
 let orbiting=false, panning=false, pmx=0, pmy=0;
 
 function updCam(){
-  cPh=Math.max(.05,Math.min(Math.PI/2-.05,cPh));
+  cPh=Math.max(.04,Math.min(Math.PI*.88,cPh));
   cD=Math.max(3,Math.min(200,cD));
   camera.position.x=cTgt.x+cD*Math.sin(cPh)*Math.cos(cTh);
   camera.position.y=cTgt.y+cD*Math.cos(cPh);
@@ -1566,7 +1620,7 @@ function smoothCam(){
 }
 
 // --- Button controls ---
-function camOrbit(dTh,dPh){cThTarget+=dTh;cPhTarget=Math.max(.05,Math.min(Math.PI/2-.05,cPhTarget+dPh));}
+function camOrbit(dTh,dPh){cThTarget+=dTh;cPhTarget=Math.max(.04,Math.min(Math.PI*.88,cPhTarget+dPh));}
 function camZoom(d){cDTarget=Math.max(3,Math.min(200,cDTarget+d));}
 function camPan(dx,dz){
   const fw=new THREE.Vector3(-Math.sin(cTh),0,-Math.cos(cTh)); // forward on XZ plane
@@ -1599,9 +1653,17 @@ updCam();
 // ===== INPUT =====
 const cvs=renderer.domElement;
 const keysDown=new Set();
+// Suppress right-click context menu so RMB pan works
+cvs.addEventListener('contextmenu',e=>e.preventDefault());
 
 // Mouse: LMB=place, RMB=orbit, MMB=pan, Scroll=zoom, Shift+Scroll=layer
 cvs.addEventListener('mousedown',e=>{
+  if(simData){
+    // Sim mode: LMB = orbit, RMB/MMB = pan
+    if(e.button===0||e.button===2){orbiting=(e.button===0);panning=(e.button===2);pmx=e.clientX;pmy=e.clientY;e.preventDefault();return;}
+    if(e.button===1){panning=true;pmx=e.clientX;pmy=e.clientY;e.preventDefault();return;}
+    return;
+  }
   if(e.button===2){
     // Right-click = orbit
     orbiting=true;pmx=e.clientX;pmy=e.clientY;e.preventDefault();return;
@@ -1621,7 +1683,7 @@ window.addEventListener('mousemove',e=>{
   const dx=e.clientX-pmx, dy=e.clientY-pmy;
   if(orbiting){
     cThTarget-=dx*.006;
-    cPhTarget=Math.max(.05,Math.min(Math.PI/2-.05,cPhTarget-dy*.006));
+    cPhTarget=Math.max(.04,Math.min(Math.PI*.88,cPhTarget-dy*.006));
     pmx=e.clientX;pmy=e.clientY;
   }
   if(panning){
@@ -2705,6 +2767,423 @@ window.addEventListener('resize',()=>{
   if(dimMode==='2d'){resize2d();draw2d();}
 });
 
+// ===== SIMULATION VIEWER =====
+let simData=null, simTurn=0, simPlaying=false, simPlayTimer=null;
+const agentGroup=new THREE.Group();scene.add(agentGroup);
+
+// agentMeshes: persistent agent objects that lerp smoothly between turns
+// Map<id, { group: THREE.Group, bodyMat: THREE.MeshStandardMaterial,
+//            current: THREE.Vector3, target: THREE.Vector3, isVictim: bool }>
+const agentMeshes=new Map();
+// deployedLadders: Map<"x,y,z" grid key, THREE.Group> — shown when window_used event fires
+const deployedLadders=new Map();
+
+function simWorldPos(ax,ay,az){
+  const grid=simData.grid;
+  const numCols=grid[0][0].length, numRows=grid[0].length;
+  const WALL_H=3;
+  const ox=-Math.floor(numCols/2), oz=-Math.floor(numRows/2);
+  return new THREE.Vector3(ox+ax, az*(WALL_H+1)+1.2, oz+ay);
+}
+
+// ── Make a canvas sprite label ──────────────────────────────────────────────
+function makeLabel(text, color){
+  const canvas=document.createElement('canvas');canvas.width=128;canvas.height=40;
+  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,128,40);
+  ctx.font='bold 18px "JetBrains Mono", monospace';
+  ctx.fillStyle=color||'#fff';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(text,64,20);
+  const tex=new THREE.CanvasTexture(canvas);tex.needsUpdate=true;
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false,depthWrite:false});
+  return new THREE.Sprite(mat);
+}
+
+// ── Build a cute humanoid THREE.Group ───────────────────────────────────────
+// Returns { group, bodyMat } so the body color can be updated per turn.
+function makeHumanoidGroup(color, isVictim, equipment){
+  const g=new THREE.Group();
+  const bodyMat=new THREE.MeshStandardMaterial({color,roughness:.5,metalness:.1});
+  const skinMat=new THREE.MeshStandardMaterial({color:0xffcea0,roughness:.8,metalness:0});
+
+  // ─ Legs (two short cylinders) ─
+  const legGeo=new THREE.CylinderGeometry(.055,.06,.26,7);
+  for(const dx of[-0.09,0.09]){
+    const leg=new THREE.Mesh(legGeo,bodyMat);leg.position.set(dx,.13,0);g.add(leg);
+  }
+
+  // ─ Torso (box) ─
+  const torso=new THREE.Mesh(new THREE.BoxGeometry(.3,.32,.17),bodyMat);
+  torso.position.set(0,.42,0);g.add(torso);
+
+  // ─ Arms ─
+  const armGeo=new THREE.CylinderGeometry(.046,.046,.26,6);
+  const armAngle=isVictim?1.05:.38;
+  for(const side of[-1,1]){
+    const arm=new THREE.Mesh(armGeo,bodyMat);
+    arm.position.set(side*.19,.41,0);arm.rotation.z=side*-armAngle;g.add(arm);
+  }
+
+  // ─ Head ─
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.125,10,8),skinMat);
+  head.position.set(0,.7,0);g.add(head);
+
+  if(!isVictim){
+    // Responder helmet (dome + brim)
+    const helmMat=new THREE.MeshStandardMaterial({color:0xffd700,roughness:.3});
+    const dome=new THREE.Mesh(
+      new THREE.SphereGeometry(.148,10,8,0,Math.PI*2,0,Math.PI*.58),helmMat);
+    dome.position.set(0,.7,0);g.add(dome);
+    const brim=new THREE.Mesh(new THREE.CylinderGeometry(.19,.19,.032,12),helmMat);
+    brim.position.set(0,.78,0);g.add(brim);
+
+    // Equipment items
+    const eq=equipment||[];
+    if(eq.includes('ax')){
+      const woodMat=new THREE.MeshStandardMaterial({color:0x6b3a1f,roughness:.85});
+      const metalMat=new THREE.MeshStandardMaterial({color:0x888899,metalness:.7,roughness:.3});
+      const hndl=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.28,5),woodMat);
+      hndl.rotation.z=Math.PI/2;hndl.position.set(-.3,.47,0);g.add(hndl);
+      const axh=new THREE.Mesh(new THREE.BoxGeometry(.05,.17,.04),metalMat);
+      axh.position.set(-.36,.47,0);g.add(axh);
+    }
+    if(eq.includes('ladder')){
+      const lMat=new THREE.MeshStandardMaterial({color:0xbbbbcc,metalness:.5,roughness:.4});
+      const sideG=new THREE.CylinderGeometry(.016,.016,.38,4);
+      for(const dx of[-.07,.07]){
+        const s=new THREE.Mesh(sideG,lMat);s.position.set(dx,.41,-.15);g.add(s);
+      }
+      for(let i=0;i<3;i++){
+        const rung=new THREE.Mesh(new THREE.CylinderGeometry(.011,.011,.14,4),lMat);
+        rung.rotation.z=Math.PI/2;rung.position.set(0,.28+i*.13,-.15);g.add(rung);
+      }
+    }
+    if(eq.includes('medic_kit')){
+      const kMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.6});
+      const cMat=new THREE.MeshStandardMaterial({color:0xee1111,roughness:.5});
+      const kit=new THREE.Mesh(new THREE.BoxGeometry(.12,.1,.07),kMat);
+      kit.position.set(.24,.44,-.02);g.add(kit);
+      const cH=new THREE.Mesh(new THREE.BoxGeometry(.088,.022,.01),cMat);
+      cH.position.set(.24,.44,.025);g.add(cH);
+      const cV=new THREE.Mesh(new THREE.BoxGeometry(.022,.088,.01),cMat);
+      cV.position.set(.24,.44,.025);g.add(cV);
+    }
+  } else {
+    // Victim hair (dark dome)
+    const hairMat=new THREE.MeshStandardMaterial({color:0x3b2207,roughness:.95});
+    const hair=new THREE.Mesh(
+      new THREE.SphereGeometry(.132,8,6,0,Math.PI*2,0,Math.PI*.53),hairMat);
+    hair.position.set(0,.7,0);g.add(hair);
+    // SOS ring around torso
+    const rMat=new THREE.MeshStandardMaterial(
+      {color:0xff3333,emissive:0xff1100,emissiveIntensity:.7,roughness:.4});
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(.3,.032,6,16),rMat);
+    ring.position.set(0,.35,0);ring.rotation.x=Math.PI/2;g.add(ring);
+  }
+
+  return {group:g, bodyMat};
+}
+
+// ── Get-or-create a persistent agent entry ───────────────────────────────────
+function upsertAgent(id, color, isVictim, equipment){
+  if(agentMeshes.has(id)){
+    const a=agentMeshes.get(id);
+    a.bodyMat.color.setHex(color);
+    return a;
+  }
+  const {group,bodyMat}=makeHumanoidGroup(color,isVictim,equipment);
+  const lbl=makeLabel(id, isVictim?'#fcd34d':'#93c5fd');
+  lbl.position.set(0,1.12,0);lbl.scale.set(.8,.25,1);
+  group.add(lbl);
+  agentGroup.add(group);
+  const entry={group,bodyMat,current:null,target:null,isVictim};
+  agentMeshes.set(id,entry);
+  return entry;
+}
+
+// ── Clear only fire-plane overlays from agentGroup ──────────────────────────
+function clearFirePlanes(){
+  const toRemove=[];
+  for(const c of agentGroup.children){if(c.userData.isFire)toRemove.push(c);}
+  toRemove.forEach(c=>{c.geometry?.dispose();c.material?.dispose();agentGroup.remove(c);});
+}
+
+// ── Fully clear all agents (called on clearAll) ──────────────────────────────
+function clearDeployedLadders(){
+  for(const[,g] of deployedLadders){agentGroup.remove(g);}
+  deployedLadders.clear();
+}
+function clearAgents(){
+  for(const[,a] of agentMeshes){agentGroup.remove(a.group);}
+  agentMeshes.clear();
+  clearFirePlanes();
+  clearDeployedLadders();
+}
+
+// ── Find which grid direction faces outside for a window cell ─────────────────
+function getWindowFaceDir(nx,ny,nz){
+  const g=simData.grid;
+  const numFloors=g.length,numRows=g[0].length,numCols=g[0][0].length;
+  function isExterior(x,y,z){
+    if(x<0||x>=numCols||y<0||y>=numRows||z<0||z>=numFloors)return true;
+    const t=(g[z][y][x]||'wall').split(':')[0].trim().toLowerCase();
+    return t==='empty';
+  }
+  for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){
+    if(isExterior(nx+dx,ny+dy,nz))return{faceDX:dx,faceDZ:dy};
+  }
+  return{faceDX:0,faceDZ:-1};
+}
+
+// ── Build a deployed fire-escape ladder leaning against a window ───────────────
+function makeDeployedLadder(wx,windowFloor,wz,faceDX,faceDZ){
+  const WALL_H=3;
+  const windowY=windowFloor*(WALL_H+1)+2.5;
+  const groundY=0.1;
+  const ladderH=windowY-groundY;
+  const g=new THREE.Group();
+  const lMat=new THREE.MeshStandardMaterial({color:0xb0b8c0,metalness:.6,roughness:.3});
+  const SPREAD=0.19;
+  // perpendicular spread direction: if face along X then spread in Z; if face along Z then spread in X
+  const perpX=Math.abs(faceDZ),perpZ=Math.abs(faceDX);
+  for(const side of[-1,1]){
+    const rail=new THREE.Mesh(new THREE.CylinderGeometry(.032,.032,ladderH,5),lMat);
+    rail.position.set(
+      wx+faceDX*0.22+side*SPREAD*perpX,
+      groundY+ladderH/2,
+      wz+faceDZ*0.22+side*SPREAD*perpZ
+    );
+    g.add(rail);
+  }
+  const rungCount=Math.max(3,Math.floor(ladderH/0.35));
+  for(let i=1;i<rungCount;i++){
+    const rung=new THREE.Mesh(new THREE.CylinderGeometry(.020,.020,SPREAD*2,4),lMat);
+    rung.position.set(wx+faceDX*0.22,groundY+(i/rungCount)*ladderH,wz+faceDZ*0.22);
+    // rungs span along the spread direction
+    if(perpX)rung.rotation.z=Math.PI/2; else rung.rotation.x=Math.PI/2;
+    g.add(rung);
+  }
+  return g;
+}
+
+function spawnFireCell(wx,wy,wz){
+  const geo=new THREE.PlaneGeometry(.92,.92);
+  const mat=new THREE.MeshStandardMaterial({
+    color:0xff3300,emissive:0xff1100,emissiveIntensity:.7,
+    transparent:true,opacity:.6,depthWrite:false,side:THREE.DoubleSide
+  });
+  const mesh=new THREE.Mesh(geo,mat);
+  mesh.rotation.x=-Math.PI/2;mesh.position.set(wx,wy+.08,wz);
+  mesh.userData.isFire=true;agentGroup.add(mesh);
+}
+
+// ── Lerp all agents toward their targets each frame ──────────────────────────
+function tickAgentLerp(){
+  for(const[,a] of agentMeshes){
+    if(!a.current||!a.target)continue;
+    a.current.lerp(a.target,.15);
+    a.group.position.copy(a.current);
+  }
+}
+
+function simGoTo(t){
+  if(!simData)return;
+  const prevTurn=simTurn;
+  simTurn=Math.max(0,Math.min(t,simData.states.length-1));
+  document.getElementById('simScrubber').value=simTurn;
+  document.getElementById('simTurnLbl').textContent='T'+simTurn+' / T'+(simData.states.length-1);
+  const state=simData.states[simTurn];
+  document.getElementById('simStatusLbl').textContent=(state.status||'').toUpperCase();
+
+  // Refresh fire planes every turn
+  clearFirePlanes();
+  const WALL_H=3;
+  const grid=simData.grid;
+  const numCols=grid[0][0].length, numRows=grid[0].length;
+  const ox=-Math.floor(numCols/2), oz=-Math.floor(numRows/2);
+  for(const node of state.threat_state.consumed_nodes){
+    const[nx,ny,nz]=node;
+    spawnFireCell(ox+nx, nz*(WALL_H+1), oz+ny);
+  }
+
+  // Update responders — persistent meshes with lerp
+  const seen=new Set();
+  for(const r of state.responder_states){
+    const color=r.status==='extracted'?0x22dd88:r.status==='blocked'?0xee4444:r.status==='carrying'?0x00ccff:0x3b82f6;
+    const a=upsertAgent(r.id,color,false,r.equipment||[]);
+    const wp=simWorldPos(r.position[0],r.position[1],r.position[2]);
+    if(!a.current){a.current=wp.clone();a.group.position.copy(a.current);}
+    a.target=wp.clone();
+    a.group.visible=true;seen.add(r.id);
+  }
+
+  // Update victims
+  for(const v of state.victim_states){
+    if(v.status==='extracted'){
+      if(agentMeshes.has(v.id))agentMeshes.get(v.id).group.visible=false;
+      seen.add(v.id);continue;
+    }
+    const color=v.status==='being_extracted'?0x22cc88:0xf59e0b;
+    const a=upsertAgent(v.id,color,true,[]);
+    const wp=simWorldPos(v.position[0],v.position[1],v.position[2]);
+    if(!a.current){a.current=wp.clone();a.group.position.copy(a.current);}
+    a.target=wp.clone();
+    a.group.visible=true;seen.add(v.id);
+  }
+
+  // Deploy ladders incrementally: persist when going forward, rebuild when scrubbing back
+  function _addLadderTurn(ti){
+    for(const ev of(simData.states[ti].events||[])){
+      if(ev.type==='window_used'&&ev.location){
+        const[nx,ny,nz]=ev.location;
+        const key=nx+','+ny+','+nz;
+        if(!deployedLadders.has(key)){
+          const{faceDX,faceDZ}=getWindowFaceDir(nx,ny,nz);
+          const ladder=makeDeployedLadder(ox+nx,nz,oz+ny,faceDX,faceDZ);
+          agentGroup.add(ladder);
+          deployedLadders.set(key,ladder);
+        }
+      }
+    }
+  }
+  if(simTurn<prevTurn){
+    // Scrubbed backward — clear and rebuild up to new turn
+    clearDeployedLadders();
+    for(let ti=0;ti<=simTurn;ti++)_addLadderTurn(ti);
+  } else {
+    // Forward or same — add any new ladders between prevTurn+1 and simTurn
+    for(let ti=prevTurn+1;ti<=simTurn;ti++)_addLadderTurn(ti);
+    // Always re-check current turn (handles initial load and scrubbing to same turn)
+    _addLadderTurn(simTurn);
+  }
+}
+
+function simStep(delta){
+  if(!simData)return;
+  simGoTo(simTurn+delta);
+}
+
+function simTogglePlay(){
+  simPlaying=!simPlaying;
+  document.getElementById('simPlayBtn').innerHTML=simPlaying?'&#9646;&#9646;':'&#9654;';
+  if(simPlaying){
+    simPlayTimer=setInterval(()=>{
+      if(simTurn>=simData.states.length-1){simPlaying=false;document.getElementById('simPlayBtn').innerHTML='&#9654;';clearInterval(simPlayTimer);return;}
+      simGoTo(simTurn+1);
+    },700);
+  } else {
+    clearInterval(simPlayTimer);
+  }
+}
+
+function loadSimData(data){
+  simData=data;
+  simTurn=0;
+  simPlaying=false;
+  clearInterval(simPlayTimer);
+  clearAgents();
+  document.getElementById('simPlayBtn').innerHTML='&#9654;';
+  // Ensure renderer matches current iframe size (fixes 0×0 init when iframe was hidden)
+  renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight||1;
+  camera.updateProjectionMatrix();
+
+  // Build the building
+  clearAll();
+  const bldgObj={grid:data.grid, name:(data.meta&&data.meta.name)||'Building', room_labels:data.building?.room_labels||{}};
+  const synthetic={building:bldgObj};
+  let raw;try{raw=parseFloorplanJSON(synthetic);}catch(e){console.error('Build error',e);return;}
+  const blocks=dedup(raw);
+  for(const b of blocks)addBlock(b[0],b[1],b[2],b[3],b[4]);
+  for(const[k]of placed)rebuildGeo(k);
+
+  // Room labels
+  if(bldgObj.room_labels){
+    const grids=extractFloorGrids(bldgObj);const g0=grids[0];
+    const{cols,numRows}=g0?gridDims(g0):{cols:16,numRows:12};
+    const ox=-Math.floor(cols/2),oz=-Math.floor(numRows/2);const WH=3;
+    const labels=flattenFloorMap(bldgObj.room_labels);
+    for(const item of labels){const c=parseCoord(item.coord);const fi=c.f||item.floorIdx;
+      addRoomLabel(ox+c.x,fi*(WH+1)+2.5,oz+c.z,item.label);}
+  }
+
+  updateStats();
+  setDim('3d');
+  camFocus();
+  // Tilt camera for a nice isometric sim view
+  cPhTarget=Math.PI*.32;cThTarget=Math.PI*.6;
+  physicsPaused=true;
+  document.getElementById('physBtn').textContent='▶ Play';
+
+  // Sim view: standard lighting but walls slightly transparent so agents inside are visible
+  setView('standard');
+  for(const[,entry]of placed){
+    const b=BLOCKS[entry.type];
+    const isWall=b&&(b.name==='BRICK'||b.name==='CONCRT'||b.name==='STONE'||b.name==='DRYWL'||b.name==='METAL');
+    if(isWall){
+      entry.mesh.material.transparent=true;
+      entry.mesh.material.opacity=0.55;
+      entry.mesh.material.depthWrite=false;
+    }
+  }
+  // Enter sim mode: hide all building tools
+  document.body.classList.add('sim-mode');
+
+  // Setup scrubber
+  const total=data.states.length-1;
+  document.getElementById('simScrubber').max=total;
+  document.getElementById('simScrubber').value=0;
+  document.getElementById('simTurnLbl').textContent='T0 / T'+total;
+  document.getElementById('simBar').classList.add('active');
+
+  simGoTo(0);
+}
+
+// postMessage integration
+window.addEventListener('message',function(e){
+  if(!e.data)return;
+
+  if(e.data.type==='RESCUEGRID_SIM_DATA'){
+    loadSimData(e.data.payload);
+  } else if(e.data.type==='RESCUEGRID_BUILDING_DATA'){
+    const json=e.data.payload;
+    clearAll();
+    let raw;try{raw=parseFloorplanJSON(json);}catch(err){console.error(err);return;}
+    const blocks=dedup(raw);
+    for(const b of blocks)addBlock(b[0],b[1],b[2],b[3],b[4]);
+    for(const[k]of placed)rebuildGeo(k);
+    const bldg=json.building||json;
+    if(bldg.room_labels){
+      const grids=extractFloorGrids(bldg);const g0=grids[0];
+      const{cols,numRows}=g0?gridDims(g0):{cols:16,numRows:12};
+      const ox=-Math.floor(cols/2),oz=-Math.floor(numRows/2);const WH=3;
+      const labels=flattenFloorMap(bldg.room_labels);
+      for(const item of labels){const c=parseCoord(item.coord);const fi=c.f||item.floorIdx;
+        addRoomLabel(ox+c.x,fi*(WH+1)+2.5,oz+c.z,item.label);}
+    }
+    updateStats();camFocus();
+    // Also show scenario agents if present
+    if(json.scenario){
+      simData={grid:bldg.grid||json.grid, states:[{turn:0,status:'preview',
+        threat_state:{consumed_nodes:[[json.scenario.threat.origin.x,json.scenario.threat.origin.y,json.scenario.threat.origin.z]],frontier_nodes:[]},
+        responder_states:json.scenario.responders.map(r=>({id:r.id,position:[r.x,r.y,r.z],status:'routing'})),
+        victim_states:json.scenario.victims.map(v=>({id:v.id,position:[v.x,v.y,v.z],status:'waiting'}))}]};
+      document.getElementById('simBar').classList.add('active');
+      document.getElementById('simScrubber').max=0;
+      document.getElementById('simTurnLbl').textContent='T0 / T0';
+      document.getElementById('simStatusLbl').textContent='PREVIEW';
+      simGoTo(0);
+    }
+  }
+});
+
+// Keyboard shortcuts for sim
+document.addEventListener('keydown',function(e){
+  if(!simData)return;
+  if(e.key==='ArrowRight'&&e.shiftKey){e.preventDefault();simStep(1);}
+  else if(e.key==='ArrowLeft'&&e.shiftKey){e.preventDefault();simStep(-1);}
+  else if(e.key===' '&&simData){e.preventDefault();simTogglePlay();}
+});
+
 let lastT=performance.now();
 let physicsPaused=false;
 function togglePhysics(){
@@ -2712,7 +3191,7 @@ function togglePhysics(){
   document.getElementById('physBtn').classList.toggle('active',!physicsPaused);
   document.getElementById('physBtn').textContent=physicsPaused?'▶ Play':'⏸ Pause';
 }
-function animate(){requestAnimationFrame(animate);const now=performance.now(),dt=Math.min((now-lastT)/1000,.1);lastT=now;if(!physicsPaused){fTmr+=dt;if(fTmr>=FT){fTmr-=FT;tickFire();procCol();updateStats();if(dimMode==='2d')draw2d();}updFireVis(dt);updateP(dt);updFall(dt);}processKeys();smoothCam();if(dimMode==='3d'){const pos=getGridPos();if(pos&&mode==='place'&&!pos.erase&&!orbiting&&!panning){ghost.visible=true;ghost.position.set(pos.gx,pos.gy+.45,pos.gz);ghostMat.color.setHex(BLOCKS[selectedBlock].isFire?0xff6600:BLOCKS[selectedBlock].color);}else ghost.visible=false;renderer.render(scene,camera);}}
+function animate(){requestAnimationFrame(animate);const now=performance.now(),dt=Math.min((now-lastT)/1000,.1);lastT=now;if(!physicsPaused){fTmr+=dt;if(fTmr>=FT){fTmr-=FT;tickFire();procCol();updateStats();if(dimMode==='2d')draw2d();}updFireVis(dt);updateP(dt);updFall(dt);}processKeys();smoothCam();if(simData)tickAgentLerp();if(dimMode==='3d'){const pos=getGridPos();if(pos&&mode==='place'&&!pos.erase&&!orbiting&&!panning){ghost.visible=true;ghost.position.set(pos.gx,pos.gy+.45,pos.gz);ghostMat.color.setHex(BLOCKS[selectedBlock].isFire?0xff6600:BLOCKS[selectedBlock].color);}else ghost.visible=false;renderer.render(scene,camera);}}
 animate();
 </script>
 </body>

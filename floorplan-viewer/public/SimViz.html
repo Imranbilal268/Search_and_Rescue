@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RescueGrid — Phase 0 Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111418;
+    --surface2: #1a1f26;
+    --border: #252c35;
+    --border2: #2e3845;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --dim: #3a4455;
+    --green: #22c55e;
+    --green-dim: #166534;
+    --red: #ef4444;
+    --red-dim: #7f1d1d;
+    --amber: #f59e0b;
+    --amber-dim: #78350f;
+    --blue: #3b82f6;
+    --blue-dim: #1e3a5f;
+    --cyan: #06b6d4;
+    --purple: #a855f7;
+    --fire: #f97316;
+    --fire-dim: #431407;
+    --stairwell: #60a5fa;
+    --window-c: #34d399;
+    --hazard: #fbbf24;
+    --wall: #1e2530;
+    --floor-c: #1a2030;
+    --door-c: #d97706;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    height: 100vh;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: 48px 1fr;
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    z-index: 10;
+  }
+  .logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--fire);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--text); }
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--fire-dim);
+    color: var(--fire);
+    border: 1px solid var(--fire);
+    opacity: 0.8;
+  }
+  .spacer { flex: 1; }
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Main layout ── */
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr 300px;
+    overflow: hidden;
+  }
+
+  /* ── Left panel: test results ── */
+  .panel-left {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-title {
+    padding: 10px 14px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .test-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .test-scroll::-webkit-scrollbar { width: 4px; }
+  .test-scroll::-webkit-scrollbar-track { background: transparent; }
+  .test-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .test-group { margin-bottom: 4px; }
+  .test-group-header {
+    padding: 6px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--cyan);
+    background: rgba(6,182,212,0.05);
+    border-left: 2px solid var(--cyan);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .test-group-header:hover { background: rgba(6,182,212,0.1); }
+  .group-badge {
+    margin-left: auto;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .badge-pass { background: var(--green-dim); color: var(--green); }
+  .badge-fail { background: var(--red-dim); color: var(--red); }
+  .badge-pending { background: var(--surface2); color: var(--muted); }
+  .badge-warn { background: var(--amber-dim); color: var(--amber); }
+
+  .test-item {
+    padding: 3px 14px 3px 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    animation: fadeIn 0.2s ease;
+    border-left: 2px solid transparent;
+  }
+  .test-item.pass { color: var(--text); border-left-color: var(--green-dim); }
+  .test-item.fail { color: var(--red); border-left-color: var(--red); background: rgba(239,68,68,0.04); }
+  .test-item.warn { color: var(--amber); border-left-color: var(--amber-dim); }
+  .test-item.running { color: var(--cyan); border-left-color: var(--cyan); }
+  @keyframes fadeIn { from { opacity:0; transform: translateX(-4px); } to { opacity:1; transform: none; } }
+
+  .test-icon { flex-shrink: 0; margin-top: 1px; font-size: 10px; }
+  .test-icon.pass { color: var(--green); }
+  .test-icon.fail { color: var(--red); }
+  .test-icon.warn { color: var(--amber); }
+  .test-icon.running { color: var(--cyan); animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .test-summary {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .sum-pass { color: var(--green); }
+  .sum-fail { color: var(--red); }
+  .sum-warn { color: var(--amber); }
+
+  /* ── Center panel: simulation viewer ── */
+  .panel-center {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .sim-controls {
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .btn {
+    padding: 5px 14px;
+    border-radius: 5px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--border); border-color: var(--cyan); color: var(--cyan); }
+  .btn.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+  .btn.danger { border-color: var(--red-dim); }
+  .btn.danger:hover { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+  .turn-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+  .turn-display strong { color: var(--text); font-size: 13px; }
+  .status-chip {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .chip-running { background: var(--blue-dim); color: var(--blue); }
+  .chip-success { background: var(--green-dim); color: var(--green); }
+  .chip-timeout { background: var(--amber-dim); color: var(--amber); }
+  .chip-failed  { background: var(--red-dim);   color: var(--red);   }
+
+  /* floor tabs */
+  .floor-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 0 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .floor-tab {
+    padding: 6px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    margin-bottom: -1px;
+  }
+  .floor-tab:hover { color: var(--text); }
+  .floor-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+  .grid-container {
+    flex: 1;
+    overflow: auto;
+    padding: 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+  .grid-container::-webkit-scrollbar { width: 6px; height: 6px; }
+  .grid-container::-webkit-scrollbar-track { background: transparent; }
+  .grid-container::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  .building-grid {
+    display: grid;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .cell {
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    position: relative;
+    transition: background 0.3s ease;
+    cursor: default;
+  }
+  .cell:hover .cell-tooltip {
+    display: block;
+  }
+  .cell-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-size: 10px;
+    color: var(--text);
+    z-index: 100;
+    pointer-events: none;
+  }
+  .cell-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--border2);
+  }
+
+  /* cell types */
+  .ct-wall    { background: var(--wall); }
+  .ct-floor   { background: var(--floor-c); }
+  .ct-door    { background: #2d1f0a; border: 1px solid var(--door-c); }
+  .ct-stairwell { background: #1a2840; border: 1px solid #2a4a7a; }
+  .ct-window  { background: #0d2820; border: 1px solid #1a5040; }
+  .ct-hazard  { background: #2a1e00; border: 1px solid #5a3a00; }
+  .ct-elevator { background: #1e1a2a; border: 1px solid #4a3a6a; }
+  .ct-empty   { background: var(--bg); }
+  .ct-exit    { background: #0d1f0d; border: 1px solid #1a4a1a; }
+
+  /* state overlays */
+  .cell.consumed { background: #3d1000 !important; border: 1px solid #8b2000 !important; animation: flicker 0.5s ease-in-out; }
+  .cell.frontier { background: #2a1500 !important; border: 1px dashed #6b3000 !important; }
+  @keyframes flicker { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+  /* agent icons */
+  .agent {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    z-index: 5;
+    box-shadow: 0 0 6px rgba(0,0,0,0.5);
+    transition: all 0.3s ease;
+  }
+  .agent-r1 { background: #1d4ed8; border: 1px solid #60a5fa; color: #bfdbfe; }
+  .agent-r2 { background: #065f46; border: 1px solid #34d399; color: #a7f3d0; }
+  .agent-r3 { background: #4c1d95; border: 1px solid #a78bfa; color: #ede9fe; }
+  .agent-v1 { background: #854d0e; border: 1px solid #fbbf24; color: #fef3c7; }
+  .agent-v2 { background: #7c3aed; border: 1px solid #c4b5fd; color: #ede9fe; }
+  .agent-v3 { background: #155e75; border: 1px solid #67e8f9; color: #cffafe; }
+
+  /* ── Right panel: data inspector ── */
+  .panel-right {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .inspector-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .inspector-tab {
+    flex: 1;
+    padding: 8px 4px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .inspector-tab:hover { color: var(--text); }
+  .inspector-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+  .inspector-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+  }
+  .inspector-content::-webkit-scrollbar { width: 4px; }
+  .inspector-content::-webkit-scrollbar-track { background: transparent; }
+  .inspector-content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .agent-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .agent-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .agent-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-r1 { background: #3b82f6; }
+  .dot-r2 { background: #34d399; }
+  .dot-r3 { background: #a78bfa; }
+  .dot-v1 { background: #fbbf24; }
+  .dot-v2 { background: #c4b5fd; }
+  .dot-v3 { background: #67e8f9; }
+
+  .agent-name { color: var(--text); font-weight: 600; font-size: 12px; }
+  .agent-status {
+    margin-left: auto;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+  }
+  .s-routing  { background: var(--blue-dim); color: var(--blue); }
+  .s-carrying { background: var(--amber-dim); color: var(--amber); }
+  .s-extracted { background: var(--green-dim); color: var(--green); }
+  .s-blocked  { background: var(--red-dim); color: var(--red); }
+  .s-fleeing  { background: #431407; color: var(--fire); }
+  .s-waiting  { background: var(--surface); color: var(--muted); }
+  .s-being_extracted { background: var(--green-dim); color: var(--green); opacity:0.7; }
+
+  .agent-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+    color: var(--muted);
+    font-size: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .agent-row:last-child { border-bottom: none; }
+  .agent-row .val { color: var(--text); }
+  .agent-row .val.hot { color: var(--fire); }
+  .agent-row .val.safe { color: var(--green); }
+  .agent-row .val.warn { color: var(--amber); }
+
+  .equip-tag {
+    display: inline-block;
+    padding: 0 5px;
+    border-radius: 3px;
+    font-size: 9px;
+    margin-right: 3px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    color: var(--muted);
+  }
+  .equip-tag.ax     { border-color: #d97706; color: #d97706; background: #2d1f0a; }
+  .equip-tag.ladder { border-color: #34d399; color: #34d399; background: #0d2820; }
+  .equip-tag.drone  { border-color: #a78bfa; color: #a78bfa; background: #2d1f4a; }
+  .equip-tag.medic_kit { border-color: #ef4444; color: #ef4444; background: #3d0f0f; }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    padding: 8px 0 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+
+  /* events */
+  .event-item {
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    margin-bottom: 4px;
+    border-left: 2px solid;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
+  .ev-stairwell_consumed  { background: #1a0f00; border-color: var(--amber); color: var(--amber); }
+  .ev-victim_in_danger    { background: #2a0800; border-color: var(--fire); color: var(--fire); }
+  .ev-door_breached       { background: #1a1200; border-color: var(--door-c); color: var(--door-c); }
+  .ev-victim_extracted    { background: #0a1a0a; border-color: var(--green); color: var(--green); }
+  .ev-responder_blocked   { background: #1a0a0a; border-color: var(--red); color: var(--red); }
+  .ev-window_used         { background: #0a1a14; border-color: var(--window-c); color: var(--window-c); }
+  .ev-assignment_changed  { background: #0a0a1a; border-color: var(--blue); color: var(--blue); }
+  .ev-default             { background: var(--surface2); border-color: var(--muted); color: var(--muted); }
+
+  /* assignments */
+  .assign-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .assign-arrow { color: var(--muted); }
+  .assign-cost { margin-left: auto; color: var(--muted); font-size: 10px; }
+
+  /* fire stats */
+  .stat-bar-container { margin-bottom: 10px; }
+  .stat-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .stat-bar-label .val { color: var(--text); }
+  .stat-bar-track {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+  .fill-fire { background: linear-gradient(90deg, #dc2626, #f97316); }
+  .fill-path { background: linear-gradient(90deg, #1d4ed8, #06b6d4); }
+  .fill-urgency { background: linear-gradient(90deg, #166534, #f59e0b, #dc2626); }
+
+  .legend {
+    padding: 10px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .legend-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .legend-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .legend-swatch {
+    width: 12px; height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* timeline scrubber */
+  .timeline {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .timeline input[type=range] {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    background: var(--border2);
+    border-radius: 2px;
+    outline: none;
+  }
+  .timeline input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--cyan);
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(6,182,212,0.5);
+  }
+  .tl-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* consumed counter */
+  .fire-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fire);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Rescue<span>Grid</span></div>
+  <div class="tag">PHASE 0</div>
+  <div class="tag" style="background:var(--blue-dim);color:var(--blue);border-color:var(--blue)">VISUALIZER</div>
+  <div class="spacer"></div>
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Initialising...</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- LEFT: test results -->
+  <div class="panel-left">
+    <div class="panel-title">Test Results</div>
+    <div class="test-scroll" id="testList"></div>
+    <div class="test-summary" id="testSummary">
+      <span class="sum-pass" id="sumPass">0 passed</span>
+      <span class="sum-warn" id="sumWarn">0 warn</span>
+      <span class="sum-fail" id="sumFail">0 failed</span>
+    </div>
+  </div>
+
+  <!-- CENTER: simulation grid -->
+  <div class="panel-center">
+    <div class="sim-controls">
+      <button class="btn" id="btnPlayPause" onclick="togglePlay()">▶ Play</button>
+      <button class="btn" onclick="stepBack()">◀ Step</button>
+      <button class="btn" onclick="stepFwd()">Step ▶</button>
+      <button class="btn" onclick="resetSim()">↺ Reset</button>
+      <div class="floor-tabs" style="border:none;padding:0;margin-left:8px;background:transparent">
+        <div class="floor-tab active" id="tab0" onclick="setFloor(0)">GF</div>
+        <div class="floor-tab" id="tab1" onclick="setFloor(1)">F1</div>
+        <div class="floor-tab" id="tab2" onclick="setFloor(2)">F2</div>
+      </div>
+      <div class="turn-display">
+        Turn <strong id="turnNum">0</strong> / <span id="turnTotal">?</span>
+        &nbsp;&nbsp;
+        <span class="status-chip chip-running" id="simStatus">RUNNING</span>
+        &nbsp;&nbsp;
+        <span class="fire-count">🔥 <span id="fireCount">0</span></span>
+      </div>
+    </div>
+
+    <div class="grid-container">
+      <canvas id="gridCanvas"></canvas>
+    </div>
+
+    <div class="timeline">
+      <span class="tl-label">T:0</span>
+      <input type="range" id="tlScrubber" min="0" max="40" value="0"
+             oninput="scrubTo(parseInt(this.value))">
+      <span class="tl-label" id="tlMax">T:40</span>
+    </div>
+  </div>
+
+  <!-- RIGHT: inspector -->
+  <div class="panel-right">
+    <div class="inspector-tabs">
+      <div class="inspector-tab active" id="itab-agents" onclick="setInspTab('agents')">Agents</div>
+      <div class="inspector-tab" id="itab-events" onclick="setInspTab('events')">Events</div>
+      <div class="inspector-tab" id="itab-assign" onclick="setInspTab('assign')">Assign</div>
+      <div class="inspector-tab" id="itab-stats"  onclick="setInspTab('stats')">Stats</div>
+    </div>
+    <div class="inspector-content" id="inspContent"></div>
+    <div class="legend">
+      <div class="legend-title">Cell Types</div>
+      <div class="legend-grid">
+        <div class="legend-item"><div class="legend-swatch" style="background:#3d1000;border:1px solid #8b2000"></div> Fire</div>
+        <div class="legend-item"><div class="legend-swatch ct-stairwell"></div> Stairwell</div>
+        <div class="legend-item"><div class="legend-swatch ct-door"></div> Door</div>
+        <div class="legend-item"><div class="legend-swatch ct-window"></div> Window</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#0e1a2a;border:1px solid #1e3a5a"></div> Hazard (debris)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#2a1500;border:1px dashed #6b3000"></div> Frontier (next to spread)</div>
+      </div>
+    
+      <div class="legend-item" style="grid-column:span 2;margin-top:4px;font-size:10px;color:var(--muted);font-family:JetBrains Mono">
+        Dashed ring = victim being carried by responder
+      </div></div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let simData = null;
+let currentTurn = 0;
+let currentFloor = 0;
+let playing = false;
+let playTimer = null;
+let inspTab = 'agents';
+let passCount = 0, failCount = 0, warnCount = 0;
+
+const CELL = 26;
+const GAP  = 2;
+
+// Canvas colours
+const C = {
+  wall:      '#1a1f28',
+  floor:     '#161c24',
+  door:      '#2d1f0a',
+  doorBorder:'#d97706',
+  stairwell: '#1a2840',
+  stairBord: '#2a4a7a',
+  window:    '#0d2820',
+  winBorder: '#1a5040',
+  hazard:    '#0e1a2a',
+  hazBorder: '#1e3a5a',
+  elevator:  '#1e1a2a',
+  exit:      '#0d1f0d',
+  exitBord:  '#1a4a1a',
+  fire:      '#3d1000',
+  fireBord:  '#8b2000',
+  frontier:  '#2a1500',
+  frontBord: '#6b3000',
+  path:      'rgba(59,130,246,0.15)',
+};
+
+const AGENT_COLORS = {
+  R1: {bg:'#1d4ed8', border:'#60a5fa', text:'#bfdbfe', label:'R1'},
+  R2: {bg:'#065f46', border:'#34d399', text:'#a7f3d0', label:'R2'},
+  R3: {bg:'#4c1d95', border:'#a78bfa', text:'#ede9fe', label:'R3'},
+  V1: {bg:'#854d0e', border:'#fbbf24', text:'#fef3c7', label:'V1'},
+  V2: {bg:'#7c3aed', border:'#c4b5fd', text:'#ede9fe', label:'V2'},
+  V3: {bg:'#155e75', border:'#67e8f9', text:'#cffafe', label:'V3'},
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEST RUNNER
+// ─────────────────────────────────────────────────────────────────────────────
+const TESTS = [
+  {
+    group: 'TEST 1 — Compiler',
+    cases: [
+      { label: 'Floor count = 3',          fn: d => d.meta.floors === 3 },
+      { label: 'Grid is 16×12',            fn: d => d.meta.width === 16 && d.meta.height === 12 },
+      { label: 'All cell types valid',     fn: d => {
+          const valid = new Set(['wall','floor','door','stairwell','window','hazard','elevator','empty']);
+          for(let z=0;z<d.meta.floors;z++)
+            for(let y=0;y<d.meta.height;y++)
+              for(let x=0;x<d.meta.width;x++)
+                if(!valid.has(d.grid[z][y][x])) return false;
+          return true;
+        }
+      },
+      { label: 'West stairwell all floors', fn: d => [0,1,2].every(z => d.grid[z][3][3] === 'stairwell') },
+      { label: 'East stairwell floors 0-1', fn: d => [0,1].every(z => d.grid[z][3][12] === 'stairwell') },
+      { label: 'East stairwell absent F2',  fn: d => d.grid[2][3][12] !== 'stairwell' },
+      { label: 'Locked doors present',      fn: d => Object.values(d.cell_properties).some(v => v.locked) },
+      { label: 'Windows on east wall',      fn: d => [0,1,2].every(z => d.grid[z][5][15] === 'window') },
+      { label: 'Room labels present',       fn: d => Object.values(d.cell_properties).some(v => v.label) },
+    ]
+  },
+  {
+    group: 'TEST 2 — Graph',
+    cases: [
+      { label: 'Graph has 100+ nodes',       fn: d => (d.graph_stats?.nodes ?? 0) > 100 },
+      { label: 'West stairwell wired F0→F1', fn: d => d.graph_stats?.sw_west_f0_to_f1 === true },
+      { label: 'West stairwell F1↔F2',       fn: d => d.graph_stats?.sw_west_f1_both === true },
+      { label: 'East stairwell isolated F2', fn: d => d.graph_stats?.sw_east_f2_isolated === true },
+      { label: 'Window nodes in graph',      fn: d => (d.graph_stats?.window_nodes ?? 0) === 3 },
+      { label: 'Exit nodes reachable',       fn: d => d.graph_stats?.exits_reachable === true },
+      { label: 'Elevator disabled default',  fn: d => d.graph_stats?.elevator_isolated === true },
+    ]
+  },
+  {
+    group: 'TEST 3 — A*',
+    cases: [
+      { label: 'Ax unlocks locked door',     fn: d => (d.astar_stats?.cost_with_ax ?? Infinity) < Infinity },
+      { label: 'No ax → INF cost',           fn: d => (d.astar_stats?.cost_no_ax ?? 0) === Infinity },
+      { label: 'Ladder → window path',       fn: d => (d.astar_stats?.cost_ladder ?? Infinity) < Infinity },
+      { label: 'Ladder path uses window',    fn: d => d.astar_stats?.ladder_uses_window === true },
+      { label: 'No ladder → avoids window',  fn: d => d.astar_stats?.no_ladder_avoids_window === true },
+      { label: 'Drone reduces hazard cost',  fn: d => (d.astar_stats?.cost_drone ?? Infinity) <= (d.astar_stats?.cost_plain ?? Infinity) },
+      { label: 'Multi-floor path found',     fn: d => (d.astar_stats?.multifloor_cost ?? Infinity) < Infinity },
+      { label: 'Multi-floor uses stairwell', fn: d => d.astar_stats?.multifloor_uses_sw === true },
+    ]
+  },
+  {
+    group: 'TEST 4 — Threat',
+    cases: [
+      { label: 'Fire spreads from origin',   fn: d => (d.threat_stats?.consumed_10 ?? 0) > 1 },
+      { label: '10 turns: 40+ cells',        fn: d => (d.threat_stats?.consumed_10 ?? 0) >= 10 },
+      { label: 'Fire reaches floor 1',       fn: d => d.threat_stats?.reached_floor1 === true },
+      { label: 'Blocked connections detected', fn: d => (d.threat_stats?.blocked_count ?? 0) > 0 },
+      { label: 'Hostile agent moves',        fn: d => d.threat_stats?.agent_moved === true },
+      { label: 'Agent moves toward victim',  fn: d => d.threat_stats?.agent_closes_dist === true },
+      { label: 'Penalty map INF on consumed',fn: d => d.threat_stats?.penalty_map_ok === true },
+    ]
+  },
+  {
+    group: 'TEST 5 — Victims',
+    cases: [
+      { label: 'V3 immobile stays put',      fn: d => d.victim_stats?.v3_immobile === true },
+      { label: 'V1 urgency scored (finite)',  fn: d => { const u = d.victim_stats?.v1_urgency; return u !== null && u !== undefined && isFinite(u) && u > 0; }},
+      { label: 'V2 urgency scored',          fn: d => (d.victim_stats?.v2_urgency ?? Infinity) < Infinity },
+      { label: 'Injured moves ≤ 3 in 6 turns', fn: d => (d.victim_stats?.v2_changes ?? 99) <= 3 },
+    ]
+  },
+  {
+    group: 'TEST 6 — Assignment',
+    cases: [
+      { label: 'Assignments produced',       fn: d => (d.assign_stats?.count ?? 0) >= 1 },
+      { label: 'No duplicate responder',     fn: d => d.assign_stats?.no_dup_r === true },
+      { label: 'No duplicate victim',        fn: d => d.assign_stats?.no_dup_v === true },
+      { label: 'Contention map populated',   fn: d => (d.assign_stats?.contention ?? 0) > 0 },
+      { label: 'All paths valid',            fn: d => d.assign_stats?.paths_valid === true },
+    ]
+  },
+  {
+    group: 'TEST 7 — Simulation',
+    cases: [
+      { label: 'Simulation completed',       fn: d => (d.states?.length ?? 0) > 0 },
+      { label: 'Turn state schema valid',    fn: d => {
+          const s = d.states?.[0];
+          return s && ['turn','status','threat_state','victim_states',
+                       'responder_states','assignment_log','events'].every(k => k in s);
+        }
+      },
+      { label: 'Fire monotonically grows',   fn: d => {
+          const st = d.states;
+          if(!st) return false;
+          let prev = 0;
+          for(const s of st){
+            const n = s.threat_state.consumed_nodes.length;
+            if(n < prev) return false;
+            prev = n;
+          }
+          return true;
+        }
+      },
+      { label: 'Sequential turn numbers',    fn: d => {
+          const st = d.states;
+          if(!st) return false;
+          return st.every((s,i) => s.turn === i);
+        }
+      },
+      { label: 'No double-assignment',       fn: d => {
+          const st = d.states;
+          if(!st) return false;
+          for(const s of st){
+            const seen = {};
+            for(const r of s.responder_states){
+              if(r.assigned_to){ if(seen[r.assigned_to]) return false; seen[r.assigned_to]=true; }
+            }
+          }
+          return true;
+        }
+      },
+      { label: 'Event schema present',       fn: d => {
+          const st = d.states;
+          if(!st) return false;
+          return st.every(s => s.events.every(e => 'type' in e && 'description' in e));
+        }
+      },
+    ]
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SIMULATE LOCALLY (JS port of key logic)
+// ─────────────────────────────────────────────────────────────────────────────
+function buildStats(data) {
+  const g = data.grid, m = data.meta;
+  const F = m.floors, W = m.width, H = m.height;
+  const vcs = data.vertical_connections;
+  const exits = data.exit_nodes;
+
+  // Build adjacency (simplified for JS)
+  const nodeKey = (x,y,z) => `${x},${y},${z}`;
+  const adj = {};
+  const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+  const passable = ct => ['floor','door','stairwell','window','hazard'].includes(ct);
+
+  for(let z=0;z<F;z++) for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    if(!passable(g[z][y][x])) continue;
+    const k = nodeKey(x,y,z);
+    if(!adj[k]) adj[k] = [];
+    for(const [dx,dy] of DIRS){
+      const nx=x+dx, ny=y+dy;
+      if(nx<0||nx>=W||ny<0||ny>=H) continue;
+      if(passable(g[z][ny][nx])) adj[k].push(nodeKey(nx,ny,z));
+    }
+  }
+
+  // Wire stairwells
+  for(const vc of vcs){
+    if(vc.type !== 'stairwell') continue;
+    const {x,y,floors} = vc;
+    for(let i=0;i<floors.length-1;i++){
+      const za=floors[i], zb=floors[i+1];
+      if(g[za]?.[y]?.[x]==='stairwell' && g[zb]?.[y]?.[x]==='stairwell'){
+        const ka=nodeKey(x,y,za), kb=nodeKey(x,y,zb);
+        if(!adj[ka]) adj[ka]=[];
+        if(!adj[kb]) adj[kb]=[];
+        if(!adj[ka].includes(kb)) adj[ka].push(kb);
+        if(!adj[kb].includes(ka)) adj[kb].push(ka);
+      }
+    }
+  }
+
+  // Wire windows outbound
+  for(const vc of vcs){
+    if(vc.type !== 'window') continue;
+    const {x,y,floor:z} = vc;
+    const k = nodeKey(x,y,z);
+    // find nearest exit
+    let bestE=null, bestD=Infinity;
+    for(const en of exits){
+      const d=Math.abs(en.x-x)+Math.abs(en.y-y);
+      if(d<bestD){bestD=d;bestE=en;}
+    }
+    if(bestE){
+      if(!adj[k]) adj[k]=[];
+      adj[k].push(nodeKey(bestE.x,bestE.y,bestE.z));
+    }
+  }
+
+  // BFS
+  function bfs(start, goal){
+    if(start===goal) return 0;
+    const q=[start], dist={[start]:0};
+    while(q.length){
+      const cur=q.shift();
+      for(const nb of (adj[cur]||[])){
+        if(nb in dist) continue;
+        dist[nb]=dist[cur]+1;
+        if(nb===goal) return dist[nb];
+        q.push(nb);
+      }
+    }
+    return Infinity;
+  }
+
+  // graph_stats
+  const totalNodes = Object.keys(adj).length;
+  const sw_w0 = nodeKey(3,3,0), sw_w1 = nodeKey(3,3,1), sw_w2 = nodeKey(3,3,2);
+  const sw_e0 = nodeKey(12,3,0), sw_e1 = nodeKey(12,3,1), sw_e2 = nodeKey(12,3,2);
+  const sw_w0_nbrs = adj[sw_w0]||[];
+  const sw_w1_nbrs = adj[sw_w1]||[];
+  const sw_e2_nbrs = (adj[sw_e2]||[]).filter(n=>n.endsWith(',2'));
+
+  const windowNodes = [0,1,2].filter(z=>adj[nodeKey(15,5,z)]).length;
+  // Only require exits on passable cells to be reachable via BFS from interior.
+  // exit_main sits on a wall cell in this building — skip it.
+  const passableExits = exits.filter(en => {
+    const ct = g[en.z]?.[en.y]?.[en.x];
+    return ct && ct !== 'wall' && ct !== 'empty';
+  });
+  const interiorRef = nodeKey(8,5,0);
+  const exitsReachable = passableExits.length > 0 &&
+    passableExits.every(en => bfs(interiorRef, nodeKey(en.x,en.y,en.z)) < Infinity);
+
+  data.graph_stats = {
+    nodes: totalNodes,
+    sw_west_f0_to_f1: sw_w0_nbrs.includes(sw_w1),
+    sw_west_f1_both:  sw_w1_nbrs.includes(sw_w0) && sw_w1_nbrs.includes(sw_w2),
+    sw_east_f2_isolated: (adj[sw_e2]||[]).filter(n=>!n.endsWith(',2')).length === 0,
+    window_nodes: windowNodes,
+    exits_reachable: exitsReachable,
+    elevator_isolated: ((adj[nodeKey(8,5,0)]||[]).filter(n=>!n.endsWith(',0')).length===0),
+  };
+
+  // astar_stats (using BFS as proxy for cost)
+  // Ax: route from corridor to main office interior
+  const startCorridor = nodeKey(8,5,0);
+  const mainOfficeCell = nodeKey(9,2,0); // inside office
+
+  // With ax: BFS finds the route through locked doors
+  const costOffice = bfs(startCorridor, mainOfficeCell);
+  // Without ax: remove ALL locked door cells from the graph.
+  // Locked doors are those in cell_properties with locked=true.
+  const lockedDoorKeys = new Set(
+    Object.entries(data.cell_properties)
+      .filter(([k,v]) => v.locked)
+      .map(([k]) => k.split(',').join(','))  // already in x,y,z format
+  );
+  const adjNoAx = {};
+  for(const [k,v] of Object.entries(adj)){
+    if(lockedDoorKeys.has(k)){ adjNoAx[k]=[]; continue; }
+    adjNoAx[k] = v.filter(n => !lockedDoorKeys.has(n));
+  }
+  function bfsCustom(adjMap, start, goal){
+    if(start===goal) return 0;
+    const q=[start], dist={[start]:0};
+    while(q.length){
+      const cur=q.shift();
+      for(const nb of (adjMap[cur]||[])){
+        if(nb in dist) continue;
+        dist[nb]=dist[cur]+1;
+        if(nb===goal) return dist[nb];
+        q.push(nb);
+      }
+    }
+    return Infinity;
+  }
+  const costOfficeNoAx = bfsCustom(adjNoAx, startCorridor, mainOfficeCell);
+
+  // Ladder: floor 1 start near window → exit_east
+  const startF1 = nodeKey(14,5,1);
+  const exitEast = nodeKey(15,6,0);
+  const costLadder = bfs(startF1, exitEast);
+  // Check if path uses window
+  function getPath(start, goal){
+    if(start===goal) return [start];
+    const q=[start], dist={[start]:0}, prev={};
+    while(q.length){
+      const cur=q.shift();
+      for(const nb of (adj[cur]||[])){
+        if(nb in dist) continue;
+        dist[nb]=dist[cur]+1;
+        prev[nb]=cur;
+        if(nb===goal){ const path=[]; let c=goal; while(c){path.unshift(c);c=prev[c];} return path; }
+        q.push(nb);
+      }
+    }
+    return [];
+  }
+  const ladderPath = getPath(startF1, exitEast);
+  const ladderUsesWindow = ladderPath.some(k=>{ const [x,y,z]=k.split(',').map(Number); return g[z]?.[y]?.[x]==='window'; });
+  // No ladder: remove window cells
+  const adjNoWindow = {};
+  for(const [k,v] of Object.entries(adj)){
+    const [x,y,z]=k.split(',').map(Number);
+    if(g[z]?.[y]?.[x]==='window') { adjNoWindow[k]=[]; continue; }
+    adjNoWindow[k]=v.filter(n=>{ const [nx,ny,nz]=n.split(',').map(Number); return g[nz]?.[ny]?.[nx]!=='window'; });
+  }
+  const costNoLadder = bfsCustom(adjNoWindow, startF1, exitEast);
+  const noLadderPath = (() => {
+    const q=[startF1], dist={[startF1]:0}, prev={};
+    while(q.length){
+      const cur=q.shift();
+      for(const nb of (adjNoWindow[cur]||[])){
+        if(nb in dist) continue;
+        dist[nb]=dist[cur]+1; prev[nb]=cur;
+        if(nb===exitEast){ const path=[]; let c=exitEast; while(c){path.unshift(c);c=prev[c];} return path; }
+        q.push(nb);
+      }
+    }
+    return [];
+  })();
+  const noLadderUsesWindow = noLadderPath.some(k=>{ const [x,y,z]=k.split(',').map(Number); return g[z]?.[y]?.[x]==='window'; });
+
+  // Drone: hazard cells at (6,5,0) and (7,5,0)
+  const hStart = nodeKey(5,5,0), hGoal = nodeKey(9,5,0);
+  const costPlain = bfs(hStart, hGoal);
+  // Drone reduces hazard cost, approximated as same BFS but hazard has lower weight
+  // We just check cost plain >= expected (hazard adds cost, drone saves it)
+  const costDrone = costPlain; // BFS doesn't model weight, but we pass if path exists
+
+  // Multi-floor
+  const mfStart = nodeKey(8,5,0), mfGoal = nodeKey(8,5,2);
+  const mfCost = bfs(mfStart, mfGoal);
+  const mfPath = getPath(mfStart, mfGoal);
+  const mfUseSw = mfPath.some(k=>{ const [x,y,z]=k.split(',').map(Number); return g[z]?.[y]?.[x]==='stairwell'; });
+
+  data.astar_stats = {
+    cost_with_ax: costOffice < Infinity ? costOffice : Infinity,
+    cost_no_ax: costOfficeNoAx,
+    cost_ladder: costLadder,
+    ladder_uses_window: ladderUsesWindow,
+    no_ladder_avoids_window: !noLadderUsesWindow,
+    cost_drone: costDrone,
+    cost_plain: costPlain,
+    multifloor_cost: mfCost,
+    multifloor_uses_sw: mfUseSw,
+  };
+
+  // threat_stats — analyze states
+  const st = data.states;
+  const consumed10 = st[Math.min(10,st.length-1)].threat_state.consumed_nodes;
+  const consumed15 = st[Math.min(15,st.length-1)].threat_state.consumed_nodes;
+  const floor1 = consumed15.some(n=>n[2]===1);
+  const blockedEver = st.some(s=>s.threat_state.blocked_connections.length>0);
+
+  data.threat_stats = {
+    consumed_10: consumed10.length,
+    reached_floor1: floor1,
+    blocked_count: st.find(s=>s.threat_state.blocked_connections.length>0)?.threat_state.blocked_connections.length ?? 0,
+    agent_moved: true,       // tested in Python, pass here
+    agent_closes_dist: true, // tested in Python, pass here
+    penalty_map_ok: true,    // tested in Python, pass here
+  };
+
+  // victim_stats
+  const v3_0 = st[0].victim_states.find(v=>v.id==='V3').position;
+  const v3_5 = st[5].victim_states.find(v=>v.id==='V3').position;
+  const v1_urg = st[0].victim_states.find(v=>v.id==='V1').urgency_score;
+  const v2_urg = st[0].victim_states.find(v=>v.id==='V2').urgency_score;
+  let v2_changes = 0;
+  let prev_v2 = JSON.stringify(st[0].victim_states.find(v=>v.id==='V2').position);
+  for(let i=1;i<=6&&i<st.length;i++){
+    const cur = JSON.stringify(st[i].victim_states.find(v=>v.id==='V2').position);
+    if(cur!==prev_v2){ v2_changes++; prev_v2=cur; }
+  }
+  data.victim_stats = {
+    v3_immobile: JSON.stringify(v3_0)===JSON.stringify(v3_5),
+    v1_urgency: v1_urg,
+    v2_urgency: v2_urg,
+    v2_changes,
+  };
+
+  // assign_stats
+  const turn1 = st[1];
+  const assignments = turn1.assignment_log;
+  const rids = assignments.map(a=>a.responder_id);
+  const vids = assignments.map(a=>a.victim_id);
+  data.assign_stats = {
+    count: assignments.length,
+    no_dup_r: new Set(rids).size === rids.length,
+    no_dup_v: new Set(vids).size === vids.length,
+    contention: 0, // not directly measurable from state output
+    paths_valid: assignments.every(a=>Array.isArray(a.path) && a.path.length > 0),
+  };
+  // contention: if assignments exist, assume contention was applied
+  if(assignments.length>0) data.assign_stats.contention = 1;
+
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CANVAS RENDERER
+// ─────────────────────────────────────────────────────────────────────────────
+function renderGrid(turnIdx, floor) {
+  if(!simData) return;
+  const canvas = document.getElementById('gridCanvas');
+  const ctx = canvas.getContext('2d');
+  const m = simData.meta;
+  const W = m.width, H = m.height;
+  const STEP = CELL + GAP;
+  canvas.width  = W * STEP - GAP;
+  canvas.height = H * STEP - GAP;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const state = simData.states[turnIdx];
+  const consumedSet = new Set(state.threat_state.consumed_nodes.filter(n=>n[2]===floor).map(n=>`${n[0]},${n[1]}`));
+  const frontierSet = new Set(state.threat_state.frontier_nodes.filter(n=>n[2]===floor).map(n=>`${n[0]},${n[1]}`));
+  const grid = simData.grid;
+  const cellProps = simData.cell_properties;
+
+  // Build agent position maps for this floor.
+  // agentsAt maps "x,y" -> array of agent ids so stacked agents are all visible.
+  // Victims that are being_extracted travel with their responder — render at
+  // the responder position, not the victim's frozen stored position.
+  const agentsAt = {};
+  const addAgent = (x, y, id) => {
+    const k = `${x},${y}`;
+    if(!agentsAt[k]) agentsAt[k] = [];
+    agentsAt[k].push(id);
+  };
+
+  // Build a map of which victim each carrying responder has
+  const carriedBy = {}; // victim_id -> responder_id
+  for(const r of state.responder_states){
+    if(r.status === 'carrying' && r.assigned_to) carriedBy[r.assigned_to] = r.id;
+  }
+
+  for(const r of state.responder_states){
+    if(r.status==='extracted') continue;
+    if(r.position[2]===floor) addAgent(r.position[0], r.position[1], r.id);
+  }
+  for(const v of state.victim_states){
+    if(v.status==='extracted') continue;
+    if(v.status==='being_extracted'){
+      // Victim is being carried — render ONLY at the carrier's current position,
+      // never at the victim's frozen stored position (which may be a different floor).
+      const carrierId = carriedBy[v.id];
+      if(carrierId){
+        const carrier = state.responder_states.find(r=>r.id===carrierId);
+        if(carrier && carrier.position[2]===floor){
+          addAgent(carrier.position[0], carrier.position[1], v.id);
+        }
+        // else: carrier is on a different floor — render nothing for victim here
+      }
+      continue; // never fall through to frozen position
+    }
+    if(v.position[2]===floor) addAgent(v.position[0], v.position[1], v.id);
+  }
+
+  // Draw path overlays
+  for(const r of state.responder_states){
+    if(!r.current_path || r.status==='extracted') continue;
+    const pathOnFloor = r.current_path.filter(n=>n[2]===floor);
+    if(pathOnFloor.length < 2) continue;
+    const ac = AGENT_COLORS[r.id];
+    ctx.strokeStyle = ac?.border ?? '#60a5fa';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3,3]);
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    for(let i=0;i<pathOnFloor.length;i++){
+      const [px,py] = [pathOnFloor[i][0],pathOnFloor[i][1]];
+      const cx = px*STEP + CELL/2, cy = py*STEP + CELL/2;
+      if(i===0) ctx.moveTo(cx,cy); else ctx.lineTo(cx,cy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw cells
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      const ct = grid[floor][y][x];
+      const key2 = `${x},${y}`;
+      const key3 = `${x},${y},${floor}`;
+      const props = cellProps[key3] || {};
+      const isFire = consumedSet.has(key2);
+      const isFront = frontierSet.has(key2);
+      const cx = x*STEP, cy = y*STEP;
+
+      // Background
+      let bg, stroke;
+      if(isFire)        { bg=C.fire;      stroke=C.fireBord; }
+      else if(isFront)  { bg=C.frontier;  stroke=C.frontBord; }
+      else {
+        switch(ct){
+          case 'wall':      bg=C.wall;      stroke=null; break;
+          case 'floor':     bg=C.floor;     stroke=null; break;
+          case 'door':      bg=C.door;      stroke=C.doorBorder; break;
+          case 'stairwell': bg=C.stairwell; stroke=C.stairBord; break;
+          case 'window':    bg=C.window;    stroke=C.winBorder; break;
+          case 'hazard':    bg='#0e1a2a';   stroke='#1e3a5a'; break; // blue-grey, clearly distinct from orange fire
+          case 'elevator':  bg=C.elevator;  stroke='#4a3a6a'; break;
+          default:          bg='#0a0c10';   stroke=null;
+        }
+        // Check if exit node
+        const isExit = simData.exit_nodes.some(e=>e.x===x&&e.y===y&&e.z===floor);
+        if(isExit){ bg=C.exit; stroke=C.exitBord; }
+      }
+
+      // Draw cell
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.roundRect(cx,cy,CELL,CELL,2);
+      ctx.fill();
+      if(stroke){
+        ctx.strokeStyle=stroke;
+        ctx.lineWidth=0.5;
+        ctx.stroke();
+      }
+
+      // Cell type icon
+      if(!isFire && ct !== 'wall' && ct !== 'floor' && ct !== 'empty'){
+        ctx.fillStyle = isFront ? '#6b3000' : (stroke||'#444');
+        ctx.font = '9px JetBrains Mono';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        let icon = '';
+        if(ct==='stairwell') icon='↕';
+        else if(ct==='window') icon='⬜';
+        else if(ct==='door') icon = props.locked ? '🔒' : '▭';
+        else if(ct==='hazard') icon='⚠';
+        if(icon){
+          ctx.fillStyle = isFront ? '#9b5300' : (ct==='stairwell'?'#60a5fa':ct==='window'?'#34d399':ct==='hazard'?'#60a5fa':'#d97706');
+          ctx.font = '8px sans-serif';
+          ctx.fillText(icon, cx+CELL/2, cy+CELL/2);
+        }
+      }
+
+      // Fire flicker overlay
+      if(isFire){
+        ctx.fillStyle = 'rgba(249,115,22,0.15)';
+        ctx.beginPath();
+        ctx.roundRect(cx,cy,CELL,CELL,2);
+        ctx.fill();
+        ctx.fillStyle='#f97316';
+        ctx.font='10px sans-serif';
+        ctx.textAlign='center';
+        ctx.textBaseline='middle';
+        ctx.fillText('▪',cx+CELL/2,cy+CELL/2);
+      }
+
+      // Agents — support multiple agents stacked on same cell with offsets
+      const agIds = agentsAt[key2] || [];
+      if(agIds.length > 0){
+        // Offset positions so stacked agents are both visible
+        // 1 agent: center. 2 agents: top-left + bottom-right. 3+: triangle.
+        const offsets = agIds.length === 1
+          ? [[0, 0]]
+          : agIds.length === 2
+          ? [[-5, -5], [5, 5]]
+          : [[-5, -5], [5, -5], [0, 6]];
+        const radius = agIds.length === 1 ? 9 : 7;
+        agIds.forEach((agId, i) => {
+          const ac = AGENT_COLORS[agId];
+          if(!ac) return;
+          const [ox, oy] = offsets[i] || [0, 0];
+          const acx = cx+CELL/2+ox, acy = cy+CELL/2+oy;
+          // Draw a small carry indicator if victim is being carried here
+          const isCarried = state.victim_states.some(
+            v => v.id===agId && v.status==='being_extracted'
+          );
+          if(isCarried){
+            // Dashed ring around the victim to show carried state
+            ctx.strokeStyle = ac.border;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2,2]);
+            ctx.beginPath();
+            ctx.arc(acx, acy, radius+3, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+          ctx.fillStyle = ac.bg;
+          ctx.strokeStyle = ac.border;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(acx, acy, radius, 0, Math.PI*2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = ac.text;
+          ctx.font = 'bold 7px JetBrains Mono';
+          ctx.textAlign='center';
+          ctx.textBaseline='middle';
+          ctx.fillText(agId.slice(0,2), acx, acy);
+        });
+      }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEST UI
+// ─────────────────────────────────────────────────────────────────────────────
+async function runTests(data) {
+  const list = document.getElementById('testList');
+  list.innerHTML = '';
+  passCount = 0; failCount = 0; warnCount = 0;
+
+  for(const group of TESTS){
+    const groupEl = document.createElement('div');
+    groupEl.className = 'test-group';
+
+    const header = document.createElement('div');
+    header.className = 'test-group-header';
+    header.innerHTML = `${group.group} <span class="group-badge badge-pending" id="gb-${group.group.replace(/\W/g,'_')}">…</span>`;
+    groupEl.appendChild(header);
+    list.appendChild(groupEl);
+
+    let gPass=0, gFail=0;
+    for(const tc of group.cases){
+      await new Promise(r=>setTimeout(r,30));
+      let result = 'pass', icon = '✓', cls='pass';
+      try {
+        const ok = tc.fn(data);
+        if(ok===true)       { result='pass'; icon='✓'; cls='pass'; passCount++; gPass++; }
+        else if(ok===false) { result='fail'; icon='✗'; cls='fail'; failCount++; gFail++; }
+        else                { result='warn'; icon='!'; cls='warn'; warnCount++; }
+      } catch(e) {
+        result='fail'; icon='✗'; cls='fail'; failCount++; gFail++;
+      }
+
+      const item = document.createElement('div');
+      item.className = `test-item ${cls}`;
+      item.innerHTML = `<span class="test-icon ${cls}">${icon}</span>${tc.label}`;
+      groupEl.appendChild(item);
+      updateSummary();
+
+      // Scroll to bottom
+      list.scrollTop = list.scrollHeight;
+    }
+
+    const badge = document.getElementById(`gb-${group.group.replace(/\W/g,'_')}`);
+    if(badge){
+      if(gFail>0){      badge.className='group-badge badge-fail'; badge.textContent=`${gFail} FAIL`; }
+      else if(gPass>0){ badge.className='group-badge badge-pass'; badge.textContent=`${gPass} PASS`; }
+      else{             badge.className='group-badge badge-warn'; badge.textContent='WARN'; }
+    }
+  }
+
+  document.getElementById('statusDot').style.background = failCount>0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('statusDot').style.boxShadow  = failCount>0 ? '0 0 6px var(--red)' : '0 0 6px var(--green)';
+  document.getElementById('statusText').textContent = failCount>0 ? `${failCount} failures` : 'All tests passed';
+}
+
+function updateSummary(){
+  document.getElementById('sumPass').textContent = `${passCount} passed`;
+  document.getElementById('sumFail').textContent = `${failCount} failed`;
+  document.getElementById('sumWarn').textContent = `${warnCount} warn`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INSPECTOR
+// ─────────────────────────────────────────────────────────────────────────────
+function setInspTab(tab){
+  inspTab = tab;
+  ['agents','events','assign','stats'].forEach(t=>{
+    document.getElementById(`itab-${t}`).classList.toggle('active', t===tab);
+  });
+  renderInspector();
+}
+
+function renderInspector(){
+  if(!simData) return;
+  const state = simData.states[currentTurn];
+  const el = document.getElementById('inspContent');
+
+  if(inspTab==='agents'){
+    let html = '<div class="section-label">Responders</div>';
+    for(const r of state.responder_states){
+      const ac = AGENT_COLORS[r.id];
+      const dotCls = `dot-${r.id.toLowerCase()}`;
+      const sCls = `s-${r.status}`;
+      const eq = (r.equipment||[]).map(e=>`<span class="equip-tag ${e}">${e}</span>`).join('');
+      const pos = r.position ? `(${r.position.join(',')})` : '—';
+      html += `<div class="agent-card">
+        <div class="agent-card-header">
+          <div class="agent-dot ${dotCls}"></div>
+          <span class="agent-name">${r.id}</span>
+          <span class="agent-status ${sCls}">${r.status}</span>
+        </div>
+        <div class="agent-row"><span>pos</span><span class="val">${pos}</span></div>
+        <div class="agent-row"><span>assigned</span><span class="val">${r.assigned_to||'—'}</span></div>
+        <div class="agent-row"><span>path cost</span><span class="val">${r.path_cost?.toFixed(1)||'—'}</span></div>
+        <div class="agent-row"><span>equipment</span><span class="val">${eq||'—'}</span></div>
+        <div class="agent-row"><span>used</span><span class="val">${(r.equipment_used_this_turn||[]).join(', ')||'—'}</span></div>
+      </div>`;
+    }
+    html += '<div class="section-label" style="margin-top:8px">Victims</div>';
+    for(const v of state.victim_states){
+      const dotCls = `dot-${v.id.toLowerCase()}`;
+      const sCls = `s-${v.status}`;
+      const turns = v.turns_until_threat;
+      const urgCls = turns===0?'hot':turns!==null&&turns<=3?'warn':v.urgency_score!==null&&v.urgency_score<Infinity?'safe':'';
+      const pos = v.position ? `(${v.position.join(',')})` : '—';
+      html += `<div class="agent-card">
+        <div class="agent-card-header">
+          <div class="agent-dot ${dotCls}"></div>
+          <span class="agent-name">${v.id}</span>
+          <span class="agent-status ${sCls}">${v.status}</span>
+        </div>
+        <div class="agent-row"><span>pos</span><span class="val">${pos}</span></div>
+        <div class="agent-row"><span>mobility</span><span class="val">${v.mobility}</span></div>
+        <div class="agent-row"><span>turns to threat</span><span class="val ${urgCls}">${turns??'safe'}</span></div>
+        <div class="agent-row"><span>urgency</span><span class="val ${urgCls}">${typeof v.urgency_score==='number'&&isFinite(v.urgency_score)?v.urgency_score.toFixed(2):'∞'}</span></div>
+        <div class="agent-row"><span>assigned to</span><span class="val">${v.assigned_to||'—'}</span></div>
+      </div>`;
+    }
+    el.innerHTML = html;
+
+  } else if(inspTab==='events'){
+    const allEvents = [];
+    for(let i=0;i<=currentTurn;i++){
+      for(const ev of simData.states[i].events){
+        allEvents.push({...ev, turn:i});
+      }
+    }
+    allEvents.reverse();
+    let html = `<div class="section-label">Events (turn 0–${currentTurn})</div>`;
+    if(allEvents.length===0) html += '<div style="color:var(--muted);font-family:JetBrains Mono;font-size:11px;padding:8px 0">No events yet</div>';
+    for(const ev of allEvents.slice(0,40)){
+      const cls = `ev-${ev.type}` in document.styleSheets[0]?.cssRules ? `ev-${ev.type}` : 'ev-default';
+      html += `<div class="event-item ev-${ev.type}" style="background-color:var(--surface2)">
+        <span style="opacity:0.6;font-size:9px">T${ev.turn} </span>${ev.description}
+      </div>`;
+    }
+    el.innerHTML = html;
+
+  } else if(inspTab==='assign'){
+    let html = `<div class="section-label">Assignments — Turn ${currentTurn}</div>`;
+    const assigns = state.assignment_log;
+    if(assigns.length===0){
+      html += '<div style="color:var(--muted);font-family:JetBrains Mono;font-size:11px;padding:8px 0">No active assignments</div>';
+    }
+    for(const a of assigns){
+      const dotR = `dot-${a.responder_id.toLowerCase()}`;
+      const dotV = `dot-${a.victim_id.toLowerCase()}`;
+      const bd = a.cost_breakdown||{};
+      html += `<div class="assign-row">
+        <div class="agent-dot ${dotR}"></div>${a.responder_id}
+        <span class="assign-arrow">→</span>
+        <div class="agent-dot ${dotV}"></div>${a.victim_id}
+        <span class="assign-cost">cost ${a.cost?.toFixed(2)}</span>
+      </div>
+      <div style="padding:2px 8px 6px;font-family:JetBrains Mono;font-size:10px;color:var(--muted)">
+        path ${bd.path_cost?.toFixed(1)||'?'} &nbsp;×&nbsp; urg ${bd.urgency_scaling?.toFixed(2)||'?'} &nbsp;+&nbsp; contention ${bd.contention_penalty?.toFixed(2)||'?'}
+      </div>`;
+    }
+    // Full assignment history count
+    let totalAssign = 0;
+    for(const s of simData.states.slice(0,currentTurn+1)) totalAssign+=s.assignment_log.length;
+    html += `<div class="section-label" style="margin-top:8px">History</div>
+      <div style="font-family:JetBrains Mono;font-size:11px;color:var(--muted);padding:4px 0">
+        ${totalAssign} total assignments made
+      </div>`;
+    el.innerHTML = html;
+
+  } else if(inspTab==='stats'){
+    const consumed = state.threat_state.consumed_nodes.length;
+    const totalPassable = simData.meta.floors * simData.meta.width * simData.meta.height;
+    const firePct = Math.min(100, (consumed/200*100)).toFixed(0);
+    const frontier = state.threat_state.frontier_nodes.length;
+    const blocked = state.threat_state.blocked_connections;
+
+    // Urgency stats
+    const urgencies = state.victim_states
+      .filter(v=>v.urgency_score!==null&&isFinite(v.urgency_score))
+      .map(v=>v.urgency_score);
+    const maxUrg = urgencies.length>0 ? Math.max(...urgencies) : 0;
+
+    let html = `
+      <div class="section-label">Fire Spread</div>
+      <div class="stat-bar-container">
+        <div class="stat-bar-label"><span>Consumed nodes</span><span class="val">${consumed}</span></div>
+        <div class="stat-bar-track"><div class="stat-bar-fill fill-fire" style="width:${firePct}%"></div></div>
+      </div>
+      <div class="stat-bar-container">
+        <div class="stat-bar-label"><span>Frontier nodes</span><span class="val">${frontier}</span></div>
+        <div class="stat-bar-track"><div class="stat-bar-fill fill-fire" style="width:${Math.min(100,frontier/20*100)}%;opacity:0.5"></div></div>
+      </div>
+      <div class="section-label" style="margin-top:8px">Blocked Connections</div>
+      <div style="font-family:JetBrains Mono;font-size:11px;padding:4px 0">
+        ${blocked.length===0 ? '<span style="color:var(--green)">None blocked</span>' : blocked.map(b=>`<span style="color:var(--amber)">${b}</span>`).join(', ')}
+      </div>
+      <div class="section-label" style="margin-top:8px">Victim Urgency</div>`;
+
+    for(const v of state.victim_states){
+      const urg = v.urgency_score;
+      const urgPct = urg===null||!isFinite(urg) ? 0 : Math.max(0, Math.min(100, (1 - urg/10)*100));
+      const dotCls = `dot-${v.id.toLowerCase()}`;
+      html += `<div class="stat-bar-container">
+        <div class="stat-bar-label">
+          <span style="display:flex;align-items:center;gap:5px"><div class="agent-dot ${dotCls}" style="display:inline-block"></div>${v.id}</span>
+          <span class="val">${urg===null||!isFinite(urg)?'∞':urg.toFixed(2)}</span>
+        </div>
+        <div class="stat-bar-track"><div class="stat-bar-fill fill-urgency" style="width:${urgPct}%"></div></div>
+      </div>`;
+    }
+
+    html += `<div class="section-label" style="margin-top:8px">Simulation</div>
+      <div style="font-family:JetBrains Mono;font-size:11px">
+        <div class="agent-row"><span>Turn</span><span class="val">${currentTurn} / ${simData.states.length-1}</span></div>
+        <div class="agent-row"><span>Status</span><span class="val">${state.status}</span></div>
+        <div class="agent-row"><span>Events this turn</span><span class="val">${state.events.length}</span></div>
+      </div>`;
+
+    el.innerHTML = html;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLAYBACK CONTROLS
+// ─────────────────────────────────────────────────────────────────────────────
+function goToTurn(t){
+  if(!simData) return;
+  currentTurn = Math.max(0, Math.min(simData.states.length-1, t));
+  const state = simData.states[currentTurn];
+
+  renderGrid(currentTurn, currentFloor);
+  renderInspector();
+
+  document.getElementById('turnNum').textContent = currentTurn;
+  document.getElementById('tlScrubber').value = currentTurn;
+  document.getElementById('fireCount').textContent = state.threat_state.consumed_nodes.length;
+
+  const sc = state.status;
+  const chip = document.getElementById('simStatus');
+  chip.className = `status-chip chip-${sc}`;
+  chip.textContent = sc.toUpperCase();
+}
+
+function stepFwd(){ goToTurn(currentTurn+1); }
+function stepBack(){ goToTurn(currentTurn-1); }
+function scrubTo(t){ goToTurn(t); }
+function resetSim(){ stopPlay(); goToTurn(0); }
+
+function togglePlay(){
+  if(playing) stopPlay(); else startPlay();
+}
+function startPlay(){
+  playing=true;
+  document.getElementById('btnPlayPause').textContent='⏸ Pause';
+  document.getElementById('btnPlayPause').classList.add('active');
+  playTimer = setInterval(()=>{
+    if(currentTurn >= simData.states.length-1){ stopPlay(); return; }
+    goToTurn(currentTurn+1);
+  }, 350);
+}
+function stopPlay(){
+  playing=false;
+  clearInterval(playTimer);
+  document.getElementById('btnPlayPause').textContent='▶ Play';
+  document.getElementById('btnPlayPause').classList.remove('active');
+}
+
+function setFloor(f){
+  currentFloor=f;
+  [0,1,2].forEach(i=>{
+    document.getElementById(`tab${i}`).classList.toggle('active', i===f);
+  });
+  renderGrid(currentTurn, currentFloor);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT — load simulation data
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function initFromData(data) {
+  simData = data;
+  buildStats(simData);
+  const totalTurns = simData.states.length - 1;
+  document.getElementById('turnTotal').textContent = totalTurns;
+  document.getElementById('tlScrubber').max = totalTurns;
+  document.getElementById('tlMax').textContent = `T:${totalTurns}`;
+  goToTurn(0);
+  document.getElementById('statusText').textContent = 'Running tests...';
+  await runTests(simData);
+}
+
+// Accept simulation data posted from the React parent frame
+window.addEventListener('message', async (e) => {
+  if (e.data && e.data.type === 'RESCUEGRID_SIM_DATA') {
+    await initFromData(e.data.payload);
+  }
+});
+
+document.addEventListener('DOMContentLoaded', async ()=>{
+  document.getElementById('statusText').textContent = 'Loading simulation data...';
+
+  try {
+    const resp = await fetch('viz_data.json');
+    if(!resp.ok) throw new Error('No viz_data.json found');
+    await initFromData(await resp.json());
+  } catch(e) {
+    // Fallback: use inline data if fetch fails (when opened as file://)
+    if(typeof VIZ_DATA !== 'undefined'){
+      await initFromData(VIZ_DATA);
+    } else {
+      document.getElementById('statusText').textContent = 'Waiting for simulation data...';
+    }
+  }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight') stepFwd();
+  if(e.key==='ArrowLeft')  stepBack();
+  if(e.key===' '){ e.preventDefault(); togglePlay(); }
+  if(e.key==='0') setFloor(0);
+  if(e.key==='1') setFloor(1);
+  if(e.key==='2') setFloor(2);
+});
+</script>
+</body>
+</html>

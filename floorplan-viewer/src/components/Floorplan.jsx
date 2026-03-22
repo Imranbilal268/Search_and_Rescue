@@ -192,6 +192,59 @@ function CellLabel({ col, row, size, text }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// AGENT / FIRE OVERLAYS — drawn on top of the grid
+// ─────────────────────────────────────────────────────────────────────────────
+
+function FireOverlay({ col, row, size, isFrontier }) {
+  const x = PADDING + col * size;
+  const y = PADDING + row * size;
+  return (
+    <rect x={x} y={y} width={size} height={size}
+      fill={isFrontier ? "rgba(255,150,0,0.35)" : "rgba(220,30,30,0.55)"}
+      stroke={isFrontier ? "#ff8800" : "#cc0000"} strokeWidth={0.5} />
+  );
+}
+
+function ResponderMarker({ col, row, size, id, status }) {
+  const cx = PADDING + col * size + size / 2;
+  const cy = PADDING + row * size + size / 2;
+  const r  = size * 0.3;
+  const fill = status === "extracted" ? "#22cc88"
+             : status === "blocked"   ? "#ee4444"
+             : status === "carrying"  ? "#00ccff"
+             :                          "#3b82f6";
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={r} fill={fill} stroke="#fff" strokeWidth={1.2} opacity={0.9} />
+      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle"
+        fontSize={size * 0.18} fontWeight="700" fontFamily="monospace" fill="#fff">
+        {id.replace("R", "R")}
+      </text>
+    </g>
+  );
+}
+
+function VictimMarker({ col, row, size, id, status }) {
+  if (status === "extracted") return null;
+  // When being carried, offset slightly so both rescuer and victim circles are visible
+  const offsetX = status === "being_extracted" ? size * 0.22 : 0;
+  const offsetY = status === "being_extracted" ? size * 0.22 : 0;
+  const cx = PADDING + col * size + size / 2 + offsetX;
+  const cy = PADDING + row * size + size / 2 + offsetY;
+  const r  = size * 0.22;
+  const fill = status === "being_extracted" ? "#22cc88" : "#f59e0b";
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={r} fill={fill} stroke="#fff" strokeWidth={1.2} opacity={0.9} />
+      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle"
+        fontSize={size * 0.15} fontWeight="700" fontFamily="monospace" fill="#fff">
+        {id}
+      </text>
+    </g>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // LEGEND
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -215,7 +268,7 @@ function Legend() {
 // FLOORPLAN — default export
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellProperties = {}, exactWidth = null, exactHeight = null }) {
+export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellProperties = {}, exactWidth = null, exactHeight = null, scenario = null, turnState = null }) {
   const [zoom, setZoom] = useState(1);
   const wrapperRef = useRef(null);
 
@@ -263,6 +316,54 @@ export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellP
     return out;
   }, [cellProperties, floorIndex]);
 
+  // ── Agent / fire overlay data ──────────────────────────────────────────────
+  // If we have a live turn state, use it; otherwise fall back to scenario initial positions.
+  const consumedSet = useMemo(() => {
+    if (!turnState) return new Set();
+    return new Set(
+      (turnState.threat_state?.consumed_nodes ?? [])
+        .filter(([, , z]) => z === floorIndex)
+        .map(([x, y]) => `${x},${y}`)
+    );
+  }, [turnState, floorIndex]);
+
+  const frontierSet = useMemo(() => {
+    if (!turnState) return new Set();
+    return new Set(
+      (turnState.threat_state?.frontier_nodes ?? [])
+        .filter(([, , z]) => z === floorIndex)
+        .map(([x, y]) => `${x},${y}`)
+    );
+  }, [turnState, floorIndex]);
+
+  const responderMarkers = useMemo(() => {
+    if (turnState) {
+      return (turnState.responder_states ?? [])
+        .filter(r => r.position[2] === floorIndex)
+        .map(r => ({ id: r.id, col: r.position[0], row: r.position[1], status: r.status }));
+    }
+    if (scenario) {
+      return (scenario.responders ?? [])
+        .filter(r => r.z === floorIndex)
+        .map(r => ({ id: r.id, col: r.x, row: r.y, status: "routing" }));
+    }
+    return [];
+  }, [turnState, scenario, floorIndex]);
+
+  const victimMarkers = useMemo(() => {
+    if (turnState) {
+      return (turnState.victim_states ?? [])
+        .filter(v => v.position[2] === floorIndex)
+        .map(v => ({ id: v.id, col: v.position[0], row: v.position[1], status: v.status }));
+    }
+    if (scenario) {
+      return (scenario.victims ?? [])
+        .filter(v => v.z === floorIndex)
+        .map(v => ({ id: v.id, col: v.x, row: v.y, status: "waiting" }));
+    }
+    return [];
+  }, [turnState, scenario, floorIndex]);
+
   // ── Shared cell render helper ─────────────────────────────────────────────
   function renderCells() {
     return (
@@ -281,6 +382,22 @@ export default function FloorPlan({ grid, floorIndex = 0, roomLabels = {}, cellP
           const [x, y] = key.split(",").map(Number);
           return <CellLabel key={`cell-${key}`} col={x} row={y} size={CELL_SIZE} text={props.label} />;
         })}
+        {/* Fire overlays */}
+        {[...consumedSet].map(key => {
+          const [x, y] = key.split(",").map(Number);
+          return <FireOverlay key={`fire-${key}`} col={x} row={y} size={CELL_SIZE} isFrontier={false} />;
+        })}
+        {[...frontierSet].filter(k => !consumedSet.has(k)).map(key => {
+          const [x, y] = key.split(",").map(Number);
+          return <FireOverlay key={`front-${key}`} col={x} row={y} size={CELL_SIZE} isFrontier={true} />;
+        })}
+        {/* Agent overlays */}
+        {responderMarkers.map(r => (
+          <ResponderMarker key={`r-${r.id}`} col={r.col} row={r.row} size={CELL_SIZE} id={r.id} status={r.status} />
+        ))}
+        {victimMarkers.map(v => (
+          <VictimMarker key={`v-${v.id}`} col={v.col} row={v.row} size={CELL_SIZE} id={v.id} status={v.status} />
+        ))}
       </>
     );
   }

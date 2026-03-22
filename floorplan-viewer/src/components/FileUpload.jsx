@@ -54,10 +54,10 @@ export default function FileUpload({ onLoad }) {
 
         // ── Detect schema format ──────────────────────────────────────────
         if (parsed.building && typeof parsed.building === "object" && Array.isArray(parsed.building.grid)) {
-          // RICH format
+          // RICH format — also covers rescuegrid-v1 (building.meta + scenario)
           const b       = parsed.building;
           floors         = b.grid;
-          buildingName   = b.name   ?? null;
+          buildingName   = b.meta?.name ?? b.name ?? null;
           roomLabels     = b.room_labels     ?? {};
           cellProperties = b.cell_properties ?? {};
         } else {
@@ -91,7 +91,8 @@ export default function FileUpload({ onLoad }) {
 
         setError(null);
         setFileName(file.name);
-        onLoad({ floors, buildingName, roomLabels, cellProperties });
+        // Pass full raw JSON so EditorShell can send it to the simulation API
+        onLoad({ floors, buildingName, roomLabels, cellProperties, rawJson: parsed });
 
       } catch (err) {
         setError(`Invalid JSON: ${err.message}`);

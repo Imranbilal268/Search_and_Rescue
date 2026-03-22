@@ -62,7 +62,14 @@ export default function EditorShell() {
   const [viewMode,          setViewMode]          = useState("floorplan"); // "floorplan" | "3d"
 
   // ── Upload mode state ─────────────────────────────────────────────────────
-  const [building, setBuilding] = useState(null);
+  const [building,    setBuilding]    = useState(null);
+  // Raw JSON from the uploaded file — used to send to the simulation API
+  const [rawJson,     setRawJson]     = useState(null);
+  // Simulation results from the API
+  const [simData,     setSimData]     = useState(null);
+  const [simStatus,   setSimStatus]   = useState("idle"); // "idle"|"loading"|"success"|"error"
+  const [simError,    setSimError]    = useState(null);
+  const [simTurn,     setSimTurn]     = useState(0);
 
   // ── Setup state — used on "Start blank" before entering stamps mode ─────────
   const [setupMeta, setSetupMeta] = useState({
@@ -139,13 +146,44 @@ export default function EditorShell() {
   // FileUpload calls this — go to the decision screen, not straight to viewer
   function handleFileLoad(data) {
     setBuilding(data);
+    setRawJson(data.rawJson ?? null);
+    setSimData(null);
+    setSimStatus("idle");
+    setSimError(null);
     setActiveFloor(0);
     setMode("post-upload");   // ← pause here so user can choose
+  }
+
+  // POST the building JSON to the FastAPI backend and run the simulation
+  async function handleRunSimulation() {
+    if (!rawJson) return;
+    setSimStatus("loading");
+    setSimError(null);
+    try {
+      const res = await fetch("/api/simulate", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(rawJson),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail ?? res.statusText);
+      }
+      const data = await res.json();
+      setSimData(data);
+      setSimStatus("success");
+      setViewMode("3d");   // automatically switch to the 3D view
+    } catch (err) {
+      setSimStatus("error");
+      setSimError(err.message);
+    }
   }
 
   // User picks "View only" on the post-upload screen
   function handleViewOnly() {
     setMode("upload");
+    // If the file has a scenario, default to the 3D view so the preview is visible
+    if (rawJson?.scenario) setViewMode("3d");
   }
 
   // User picks "Edit as stamps" on the post-upload screen
@@ -213,6 +251,11 @@ export default function EditorShell() {
   function handleReset() {
     setMode(null);
     setBuilding(null);
+    setRawJson(null);
+    setSimData(null);
+    setSimStatus("idle");
+    setSimError(null);
+    setSimTurn(0);
     setStampsPerFloor({});
     setActiveFloor(0);
     setSelectedStampType(null);
@@ -373,6 +416,27 @@ export default function EditorShell() {
               </label>
             </div>
           )}
+          {/* Run Simulation — only shown when a scenario is available */}
+          {rawJson?.scenario && (
+            <div style={styles.simControls}>
+              <button
+                style={{
+                  ...styles.simBtn,
+                  ...(simStatus === "loading" ? styles.simBtnLoading : {}),
+                }}
+                onClick={handleRunSimulation}
+                disabled={simStatus === "loading"}
+              >
+                {simStatus === "loading" ? "⏳ Running…" : "▶ Run Simulation"}
+              </button>
+              {simStatus === "success" && (
+                <span style={styles.simSuccess}>✓ Done</span>
+              )}
+              {simStatus === "error" && (
+                <span style={styles.simError} title={simError}>⚠ Error</span>
+              )}
+            </div>
+          )}
           <button style={styles.resetBtn} onClick={handleReset}>
             ↩ Back to start
           </button>
@@ -404,10 +468,27 @@ export default function EditorShell() {
         />
       )}
 
+      {/* ── Simulation turn scrubber — floor plan mode when sim data available ── */}
+      {viewMode === "floorplan" && simData && (
+        <div style={styles.turnBar}>
+          <button style={styles.turnBtn} onClick={() => setSimTurn(t => Math.max(0, t - 1))}>◀</button>
+          <input type="range" min={0} max={simData.states.length - 1} value={simTurn}
+            onChange={e => setSimTurn(+e.target.value)} style={styles.turnScrubber} />
+          <button style={styles.turnBtn} onClick={() => setSimTurn(t => Math.min(simData.states.length - 1, t + 1))}>▶</button>
+          <span style={styles.turnLabel}>
+            T{simTurn} / T{simData.states.length - 1}
+            {" · "}
+            <span style={{ color: simData.states[simTurn]?.status === "success" ? "#22cc88" : simData.states[simTurn]?.status === "failed" ? "#ee4444" : "#888" }}>
+              {simData.states[simTurn]?.status?.toUpperCase()}
+            </span>
+          </span>
+        </div>
+      )}
+
       {/* ── Main content ── */}
       <main style={styles.main}>
         {viewMode === "3d" ? (
-          <SimView />
+          <SimView rawJson={rawJson} simData={simData} />
         ) : mode === "stamps" ? (
           // Stamp editor: palette sidebar + interactive canvas
           <div style={styles.editorRow}>
@@ -435,6 +516,8 @@ export default function EditorShell() {
             floorIndex={activeFloor}
             roomLabels={roomLabels}
             cellProperties={cellProperties}
+            scenario={rawJson?.scenario ?? null}
+            turnState={simData ? simData.states[simTurn] : null}
           />
         )}
       </main>
@@ -555,6 +638,23 @@ const styles = {
     border: "1px solid #ccc", borderRadius: "6px",
     backgroundColor: "#fff", cursor: "pointer", color: "#444", flexShrink: 0,
   },
+  simControls: {
+    display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0,
+  },
+  simBtn: {
+    padding: "0.4rem 1rem", fontSize: "0.85rem", fontWeight: "700",
+    border: "none", borderRadius: "6px",
+    backgroundColor: "#2563eb", cursor: "pointer", color: "#fff", flexShrink: 0,
+  },
+  simBtnLoading: {
+    backgroundColor: "#6b9ed4", cursor: "not-allowed",
+  },
+  simSuccess: {
+    fontSize: "0.8rem", color: "#16a34a", fontWeight: "600",
+  },
+  simError: {
+    fontSize: "0.8rem", color: "#dc2626", fontWeight: "600", cursor: "help",
+  },
   main: {
     width:         "100%",
     display:       "flex",
@@ -594,6 +694,39 @@ const styles = {
     color:           "#1a1a1a",
     borderColor:     "#e5e7eb",
     borderBottomColor: "#fff",
+  },
+  turnBar: {
+    display:         "flex",
+    alignItems:      "center",
+    gap:             "0.5rem",
+    padding:         "0.4rem 0.75rem",
+    backgroundColor: "#fff",
+    border:          "1px solid #e5e7eb",
+    borderRadius:    "8px",
+    width:           "100%",
+  },
+  turnBtn: {
+    padding:         "0.2rem 0.6rem",
+    fontSize:        "0.8rem",
+    border:          "1px solid #ddd",
+    borderRadius:    "5px",
+    backgroundColor: "#fff",
+    cursor:          "pointer",
+    color:           "#444",
+    flexShrink:      0,
+  },
+  turnScrubber: {
+    flex:    1,
+    cursor:  "pointer",
+    accentColor: "#2563eb",
+  },
+  turnLabel: {
+    fontSize:   "0.78rem",
+    color:      "#555",
+    fontFamily: "monospace",
+    flexShrink: 0,
+    minWidth:   "120px",
+    textAlign:  "right",
   },
 };
 

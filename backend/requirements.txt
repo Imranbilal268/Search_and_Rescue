@@ -5,9 +5,13 @@
 #
 # All other imports (heapq, collections, math, random, json, copy, time)
 # are Python stdlib and require no installation.
- 
+
 # Hungarian algorithm (linear_sum_assignment) used in assignment.py
 scipy>=1.9.0
- 
+
 # Required by scipy; also used directly for cost matrix construction in assignment.py
 numpy>=1.23.0
+
+# FastAPI server (api.py)
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
