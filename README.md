@@ -2,6 +2,7 @@
 > Simulate emergency response scenarios in multi-floor buildings — before anyone ever sets foot inside.
 
 **Live Demo:** [https://search-and-rescue-1.onrender.com/](https://search-and-rescue-1.onrender.com/)
+Note: We have taken down the generate AI summary of the simulation due to errors with applying credits, otherwise everything works.
 
 Search & Rescue lets you construct a precise, multi-floor building model and run AI-driven rescue simulations against it. Drop in responders, place victims, add hazard zones, and watch the backend calculate optimal extraction paths in real time.
 
