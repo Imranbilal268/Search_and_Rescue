@@ -13,6 +13,84 @@ const DEFAULT_FLOOR_COUNT = 3;
 const DEFAULT_GRID_WIDTH  = 20;
 const DEFAULT_GRID_HEIGHT = 15;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Stairwell auto-detection
+// Scans a floors array (grid[z][y][x]) for 'stairwell' cells, groups
+// adjacent same-xy cells that appear on 2+ floors into vertical connections.
+// ─────────────────────────────────────────────────────────────────────────────
+function detectStairwells(floors) {
+  if (!floors || floors.length < 2) return [];
+
+  // Map "x,y" → Set of floor indices where a stairwell cell exists
+  const posToFloors = new Map();
+  for (let z = 0; z < floors.length; z++) {
+    const grid = floors[z];
+    if (!grid) continue;
+    for (let y = 0; y < grid.length; y++) {
+      const row = grid[y];
+      for (let x = 0; x < (row?.length ?? 0); x++) {
+        if (row[x] === 'stairwell') {
+          const key = `${x},${y}`;
+          if (!posToFloors.has(key)) posToFloors.set(key, new Set());
+          posToFloors.get(key).add(z);
+        }
+      }
+    }
+  }
+
+  // Keep only positions that span 2+ floors
+  const multiFloor = new Map();
+  for (const [key, fs] of posToFloors) {
+    if (fs.size >= 2) multiFloor.set(key, fs);
+  }
+  if (multiFloor.size === 0) return [];
+
+  // Connected-component grouping of adjacent multi-floor positions
+  const visited = new Set();
+  const groups  = [];
+  for (const key of multiFloor.keys()) {
+    if (visited.has(key)) continue;
+    const group = [];
+    const queue = [key];
+    while (queue.length) {
+      const cur = queue.shift();
+      if (visited.has(cur) || !multiFloor.has(cur)) continue;
+      visited.add(cur);
+      group.push(cur);
+      const [cx, cy] = cur.split(',').map(Number);
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const nk = `${cx+dx},${cy+dy}`;
+        if (multiFloor.has(nk) && !visited.has(nk)) queue.push(nk);
+      }
+    }
+    if (group.length) groups.push(group);
+  }
+
+  // Build a vertical connection per group
+  return groups.map((keys, i) => {
+    const positions = keys.map(k => k.split(',').map(Number));
+    // Pick representative cell closest to the centroid
+    const cx = positions.reduce((s, [x]) => s + x, 0) / positions.length;
+    const cy = positions.reduce((s, [, y]) => s + y, 0) / positions.length;
+    const [rx, ry] = positions.reduce((best, p) =>
+      (p[0]-cx)**2 + (p[1]-cy)**2 < (best[0]-cx)**2 + (best[1]-cy)**2 ? p : best
+    );
+    // Union of all floors represented by cells in this group
+    const floorSet = new Set();
+    for (const k of keys) for (const f of multiFloor.get(k)) floorSet.add(f);
+    return {
+      id:                         `stairwell_${i + 1}`,
+      type:                       'stairwell',
+      label:                      `Stairwell ${i + 1}`,
+      x:                          rx,
+      y:                          ry,
+      floors:                     [...floorSet].sort((a, b) => a - b),
+      traversal_cost:             3,
+      victim_carry_cost_multiplier: 2.0,
+    };
+  });
+}
+
 function buildWallBorder(width, height) {
   const stamps = [];
   for (let x = 0; x < width; x++) {
@@ -117,9 +195,13 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
     if (sc?.threat)            setThreat(sc.threat);
     if (sc?.simulation_config) setSimConfig(sc.simulation_config);
     const b = initialJson?.building || initialJson;
-    if (b?.exit_nodes)           setExitNodes(b.exit_nodes);
-    if (b?.vertical_connections) setVertConn(b.vertical_connections);
-    if (b?.cell_properties)      setCellPropsMap(b.cell_properties);
+    if (b?.exit_nodes) setExitNodes(b.exit_nodes);
+    if (b?.vertical_connections?.length) {
+      setVertConn(b.vertical_connections);
+    } else {
+      setVertConn(detectStairwells(data.floors));
+    }
+    if (b?.cell_properties) setCellPropsMap(b.cell_properties);
     // Go straight to stamps editor
     const converted = gridToStamps(data.floors);
     const firstFloor = data.floors[0];
@@ -250,9 +332,13 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
     if (sc?.threat)            setThreat(sc.threat);
     if (sc?.simulation_config) setSimConfig(sc.simulation_config);
     const b = data.rawJson?.building || data.rawJson;
-    if (b?.exit_nodes)           setExitNodes(b.exit_nodes);
-    if (b?.vertical_connections) setVertConn(b.vertical_connections);
-    if (b?.cell_properties)      setCellPropsMap(b.cell_properties);
+    if (b?.exit_nodes) setExitNodes(b.exit_nodes);
+    if (b?.vertical_connections?.length) {
+      setVertConn(b.vertical_connections);
+    } else {
+      setVertConn(detectStairwells(data.floors));
+    }
+    if (b?.cell_properties) setCellPropsMap(b.cell_properties);
     // Go straight to stamps editor
     const converted = gridToStamps(data.floors);
     const firstFloor = data.floors[0];
@@ -357,6 +443,15 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
   function updateVCFloors(id, floorsStr) {
     const floors = floorsStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
     updateVC(id, { floors });
+  }
+  function reDetectStairwells() {
+    // Use compiledGrids when in stamps mode, else fall back to loaded building floors
+    const floors = compiledGrids
+      ? Array.from({ length: gridMeta.floorCount }, (_, i) => compiledGrids[i] ?? [])
+      : building?.floors;
+    if (!floors) return;
+    const detected = detectStairwells(floors);
+    setVertConn(detected);
   }
 
   // ── Cell property helpers ─────────────────────────────────────────────────
@@ -723,6 +818,13 @@ export default function EditorShell({ initialJson, onJsonChange, onBack, onNavig
                 onClick={() => setScenarioMode(scenarioMode === 'place-stairwell' ? null : 'place-stairwell')}
               >
                 + {scenarioMode === 'place-stairwell' ? 'Click grid to place…' : 'Add Stairwell'}
+              </button>
+              <button
+                style={{ ...S.addBtn, marginTop: 3, borderColor: 'rgba(139,92,246,.2)', color: 'rgba(139,92,246,.6)', background: 'transparent', fontSize: 8 }}
+                onClick={reDetectStairwells}
+                title="Scan the current grid for stairwell cells and rebuild vertical connections"
+              >
+                ↺ Auto-detect from grid
               </button>
             </div>
 
