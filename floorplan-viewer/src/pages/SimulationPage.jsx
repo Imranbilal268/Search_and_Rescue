@@ -408,7 +408,9 @@ export default function SimulationPage({ onBack, onNavigate, initialJson, onJson
           },
         },
       };
-      const res = await fetch('/api/simulate', {
+
+      //fetch(`api/simulate)
+      const res = await fetch(`${API_URL}/api/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
