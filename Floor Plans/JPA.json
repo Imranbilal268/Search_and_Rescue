@@ -118,7 +118,7 @@
           "wall",
           "wall",
           "wall",
-          "wall",
+          "door",
           "wall",
           "wall",
           "wall",
@@ -238,7 +238,7 @@
           "wall",
           "wall",
           "wall",
-          "wall",
+          "door",
           "wall",
           "wall",
           "wall",
@@ -454,7 +454,7 @@
           "floor",
           "floor",
           "floor",
-          "wall",
+          "door",
           "floor",
           "floor",
           "floor",
@@ -849,7 +849,7 @@
           "floor",
           "wall",
           "wall",
-          "wall",
+          "door",
           "wall",
           "wall",
           "wall"
@@ -1138,6 +1138,22 @@
       },
       "13,13,2": {
         "label": "Bedroom C south window"
+      },
+      "11,9,0": {
+        "locked": false,
+        "label": "Hallway to south central door"
+      },
+      "9,4,1": {
+        "locked": false,
+        "label": "Bedroom suite to great-room door"
+      },
+      "18,6,2": {
+        "locked": false,
+        "label": "Upper right room door"
+      },
+      "11,4,0": {
+        "locked": false,
+        "label": "Kitchen to hallway door"
       }
     },
     "vertical_connections": [
